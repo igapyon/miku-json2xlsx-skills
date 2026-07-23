@@ -1,0 +1,14 @@
+{
+ "title": "igapyon-miku-json2xlsx Skill Index",
+ "generator": "miku-indexgen",
+ "generation": {"schemaVersion":1,"inputPath":".","markdownOutput":false,"recursive":true,"includeExtensions":["md","mjs","json","yaml"],"inputEncoding":"utf8","outputEncoding":"utf8","title":"igapyon-miku-json2xlsx Skill Index","includeGeneratorMetadata":true},
+ "basePath": ".",
+ "files": [
+  {"name":"SKILL.md","path":"SKILL.md","ext":"md","dir":"","size":3664,"description":"Use only when the user explicitly names `miku-json2xlsx`, `miku-json2xlsx-skills`, or `igapyon-miku-json2xlsx` for product-specific JSON or JSONL to XLSX workflows. Do not auto-activate for generic JSON, spreadsheet, XLSX, data analysis, or file-convers...","summary":"Miku JSON to XLSX"},
+  {"name":"openai.yaml","path":"agents/openai.yaml","ext":"yaml","dir":"agents","size":119},
+  {"name":"INDEX.md","path":"references/INDEX.md","ext":"md","dir":"references","size":593,"summary":"Miku JSON to XLSX References"},
+  {"name":"operations-map.md","path":"references/runtime/operations-map.md","ext":"md","dir":"references/runtime","size":1967,"summary":"Runtime Operations Map"},
+  {"name":"upstream-contract.md","path":"references/runtime/upstream-contract.md","ext":"md","dir":"references/runtime","size":1900,"summary":"Upstream Contract"},
+  {"name":"json2xlsx-workflow.md","path":"references/workflow/json2xlsx-workflow.md","ext":"md","dir":"references/workflow","size":1952,"summary":"JSON to XLSX Workflow"}
+ ]
+}
