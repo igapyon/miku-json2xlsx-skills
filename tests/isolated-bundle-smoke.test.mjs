@@ -9,7 +9,7 @@ const ROOT = process.cwd();
 const repoName = "miku-json2xlsx-skills";
 const skillName = "igapyon-miku-json2xlsx";
 
-test("generated bundle works from an isolated handoff-only install shape", () => {
+test("generated bundle runs the upstream CLI from an isolated install shape", () => {
   execFileSync("npm", ["run", "build:bundle"], {
     cwd: ROOT,
     encoding: "utf8"
@@ -23,5 +23,19 @@ test("generated bundle works from an isolated handoff-only install shape", () =>
   assert.equal(fs.existsSync(path.resolve(installedSkillRoot, "SKILL.md")), true);
   assert.equal(fs.existsSync(path.resolve(installedSkillRoot, "index.json")), true);
   assert.equal(fs.existsSync(path.resolve(installedSkillRoot, "references", "INDEX.md")), true);
-  assert.equal(fs.existsSync(path.resolve(installedSkillRoot, "runtime")), true);
+  assert.equal(
+    fs.existsSync(path.resolve(installedSkillRoot, "runtime", "miku-json2xlsx-0.3.0.mjs")),
+    true
+  );
+  assert.equal(
+    fs.existsSync(path.resolve(installedSkillRoot, "runtime", "runtime-manifest.json")),
+    true
+  );
+
+  const runner = path.resolve(installedSkillRoot, "lib", "run-miku-json2xlsx.mjs");
+  const version = execFileSync(process.execPath, [runner, "--version"], {
+    cwd: isolatedRoot,
+    encoding: "utf8"
+  });
+  assert.equal(version, "miku-json2xlsx 0.3.0\n");
 });

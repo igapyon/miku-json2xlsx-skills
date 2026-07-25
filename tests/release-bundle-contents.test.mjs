@@ -47,8 +47,12 @@ test("release zip contains installable skill files and excludes development-only
   assertIncludes(entries, `skills/${skillName}/index.json`);
   assertIncludes(entries, `skills/${skillName}/references/INDEX.md`);
   assertIncludes(entries, `skills/${skillName}/references/workflow/json2xlsx-workflow.md`);
+  assertIncludes(entries, `skills/${skillName}/references/runtime/mapping-v1.md`);
   assertIncludes(entries, `skills/${skillName}/references/runtime/operations-map.md`);
   assertIncludes(entries, `skills/${skillName}/references/runtime/upstream-contract.md`);
+  assertIncludes(entries, `skills/${skillName}/lib/run-miku-json2xlsx.mjs`);
+  assertIncludes(entries, `skills/${skillName}/runtime/runtime-manifest.json`);
+  assertIncludes(entries, `skills/${skillName}/runtime/miku-json2xlsx-0.3.0.mjs`);
 
   assert.equal(entries.some((entry) => entry.includes(".DS_Store")), false);
   assert.equal(entries.some((entry) => entry.startsWith("tests/")), false);

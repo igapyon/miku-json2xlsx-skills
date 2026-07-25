@@ -10,14 +10,13 @@ skill layer.
 
 ## Current Status
 
-This repository is at the initial `0.2.2` scaffold stage. Upstream release
-`v0.2.0` can build an executable CLI bundle and an importable runtime bundle,
-but its GitHub Release currently has no attached assets. The installable skill
-therefore remains `handoff-only` until a versioned executable CLI artifact is
-received. It must not claim that an XLSX conversion was executed.
+This repository is CLI-backed at version `0.3.0`. It bundles the executable
+runtime from upstream `miku-json2xlsx` release `v0.3.0` and supports the
+published `inspect`, `validate-mapping`, and `convert` operations.
 
-The target maturity is CLI-backed operation using a versioned runtime artifact
-received from `miku-json2xlsx`.
+The skill keeps mapping decisions human-reviewable and delegates JSON parsing,
+mapping validation, XLSX generation, and diagnostics to the bundled upstream
+runtime.
 
 ## Repository and Skill Names
 
@@ -56,6 +55,13 @@ Build the release zip:
 npm run build:bundle:zip
 ```
 
+Verify the bundled upstream runtime:
+
+```bash
+node skills/igapyon-miku-json2xlsx/lib/run-miku-json2xlsx.mjs --version
+node skills/igapyon-miku-json2xlsx/lib/run-miku-json2xlsx.mjs --help
+```
+
 After changing bundled skill files, regenerate
 `skills/igapyon-miku-json2xlsx/index.json` with `miku-indexgen`; do not edit the
 generated index manually.
@@ -67,12 +73,13 @@ validation, XLSX generation, diagnostics, and conversion limits. This
 repository owns activation, agent workflow guidance, runtime discovery,
 human-reviewable handoff, and packaging.
 
-Runtime artifacts will live under
-`skills/igapyon-miku-json2xlsx/runtime/` after the upstream executable bundle is
-published or otherwise delivered through a documented channel and placed there
-by a human. The upstream `v0.2.0` source build names the executable bundle
-`miku-json2xlsx.mjs` and the separate importable bundle
-`miku-json2xlsx-runtime.mjs`.
+The executable runtime is
+`skills/igapyon-miku-json2xlsx/runtime/miku-json2xlsx-0.3.0.mjs`.
+Its release provenance and SHA-256 are recorded in
+`skills/igapyon-miku-json2xlsx/runtime/runtime-manifest.json` and verified
+before every runner invocation.
+The importable upstream runtime bundle has a different artifact role and is not
+used as the CLI executable.
 
 ## Repository Notes
 

@@ -33,11 +33,12 @@ data cleanup, or format-conversion requests.
 
 ## Current Backend Status
 
-The initial `0.2.2` scaffold is `handoff-only`. Upstream `v0.2.0` can build a
-metadata-only CLI runtime, but no versioned Release asset has been received and
-JSON/XLSX product operations remain unimplemented. Do not execute a conversion,
-invent unpublished CLI flags or mapping fields, or claim that an XLSX file was
-generated.
+Version `0.3.0` is CLI-backed. The bundled upstream executable supports
+`inspect`, `validate-mapping`, and `convert`. Invoke it through
+`lib/run-miku-json2xlsx.mjs`, which resolves the executable declared by
+`runtime/runtime-manifest.json` and verifies its SHA-256 before execution. Do
+not substitute the importable runtime bundle or an unrelated spreadsheet
+implementation.
 
 ## Core Rules
 
@@ -47,24 +48,53 @@ generated.
   runtime handoff, and concise result reporting
 - expose important assumptions, missing fields, mixed types, and warnings before
   conversion once the upstream inspection contract exists
-- require human approval or an unambiguous instruction before a future
-  conversion operation writes an XLSX file
+- require human approval or an unambiguous instruction before a conversion
+  operation writes an XLSX file
 - avoid loading an entire large JSONL file into agent context; use the upstream
-  inspection result and bounded samples when that capability becomes available
+  inspection result and bounded samples
 - treat `index.json` as generated discovery metadata and never edit it manually
 - preserve upstream diagnostics and do not hide unsupported behavior
 - do not implement a parallel JSON-to-XLSX converter in this repository
+- treat `runtime/runtime-manifest.json` as the machine-readable runtime
+  provenance source; do not bypass its digest verification
+- use `--result-format json` for agent-operated product commands
+- check the process exit code, result `status`, `diagnostics`, and `artifacts`
+- do not add `--overwrite` unless the user explicitly authorizes replacement
 
-## Current Workflow
+## CLI Workflow
 
-Until an upstream runtime is received:
+1. Run the inspection:
 
-1. identify the requested `miku-json2xlsx` workflow and input constraints
-2. explain that executable inspection and conversion are not yet available
-3. provide only human-reviewable handoff requirements supported by the published
-   project scope
-4. record unresolved mapping or runtime dependencies without presenting them as
-   implemented contracts
+   ```bash
+   node <skill-root>/lib/run-miku-json2xlsx.mjs inspect \
+     --input <input.json-or-jsonl> --result-format json
+   ```
+
+2. Review `inspection.scope`, paths, types, missing/null values, arrays, and
+   bounded samples. Read
+   [references/runtime/mapping-v1.md](references/runtime/mapping-v1.md), then
+   propose a mapping v1 document using the published contract.
+3. Validate the mapping:
+
+   ```bash
+   node <skill-root>/lib/run-miku-json2xlsx.mjs validate-mapping \
+     --mapping <mapping.json> --result-format json
+   ```
+
+4. Present material assumptions and warnings. Obtain approval or an unambiguous
+   instruction identifying the reviewed mapping and output path.
+5. Convert:
+
+   ```bash
+   node <skill-root>/lib/run-miku-json2xlsx.mjs convert \
+     --input <input.json-or-jsonl> \
+     --output <output.xlsx> \
+     --mapping <mapping.json> \
+     --result-format json
+   ```
+
+6. Report the XLSX artifact path, sheets/rows when reported, and diagnostics.
+   Treat exit codes `1`, `2`, and `3` according to the upstream contract.
 
 ## References
 
@@ -73,8 +103,10 @@ Read these only when needed:
 - [index.json](index.json) for generated bundled-file discovery
 - [references/INDEX.md](references/INDEX.md) for reference navigation
 - [references/workflow/json2xlsx-workflow.md](references/workflow/json2xlsx-workflow.md)
-  for the planned analysis, approval, execution, and reporting flow
+  for the analysis, approval, execution, and reporting flow
 - [references/runtime/operations-map.md](references/runtime/operations-map.md)
   for current operation availability and backend policy
 - [references/runtime/upstream-contract.md](references/runtime/upstream-contract.md)
   for the upstream compatibility anchor and runtime boundary
+- [references/runtime/mapping-v1.md](references/runtime/mapping-v1.md) for the
+  published mapping shape, supported types, tracking columns, and v1 limits

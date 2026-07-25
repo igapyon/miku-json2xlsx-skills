@@ -2,26 +2,25 @@
 
 ## Backend Policy
 
-Current policy: `handoff-only`.
+Current policy: `cli-only`.
 
-The target policy after receiving and testing an upstream CLI runtime is
-`cli-preferred`. Do not change the policy until runtime metadata and focused
-integration tests pass from the isolated bundle shape.
-
-Upstream `v0.2.0` source can build an executable CLI bundle that supports
-`--help` and `--version`, but the GitHub Release has no attached asset. Metadata
-support does not make the product operations below executable.
+Use the bundled upstream `v0.3.0` executable through
+`lib/run-miku-json2xlsx.mjs`. The runner requires
+`runtime/runtime-manifest.json` and verifies the declared executable SHA-256
+before every operation. Missing, incompatible, or digest-mismatched runtime is
+a hard error. Do not fall back to an MCP backend, importable runtime bundle,
+skill-local converter, or unrelated spreadsheet implementation.
 
 ## Operations
 
 | Operation | Input role | Output role | Current status |
 |---|---|---|---|
-| `metadata` | `--help` or `--version` | CLI contract or version | implemented upstream; artifact not received |
-| `inspect` | JSON, JSONL, or stdin | structured input profile and bounded samples | unavailable; upstream CLI pending |
-| `mapping-plan` | inspection result and user intent | human-reviewable mapping proposal | handoff guidance only |
-| `mapping-validate` | machine-readable mapping | validation diagnostics | unavailable; upstream contract pending |
-| `convert` | input plus approved mapping | XLSX and diagnostics | unavailable; upstream runtime pending |
-| `report` | conversion result | concise sheet, count, and warning summary | unavailable until conversion exists |
+| `metadata` | `--help` or `--version` | CLI contract or version | CLI |
+| `inspect` | JSON, JSONL, or stdin | structured input profile and bounded samples | CLI |
+| `mapping-plan` | inspection result and user intent | human-reviewable mapping proposal | Agent/human review |
+| `mapping-validate` | mapping v1 JSON | validation result and diagnostics | CLI |
+| `convert` | input plus approved mapping | XLSX and diagnostics | CLI |
+| `report` | conversion result | concise artifact and warning summary | Agent from CLI result |
 
 ## Artifact Roles
 

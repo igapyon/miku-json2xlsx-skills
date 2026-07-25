@@ -1,8 +1,8 @@
 # JSON to XLSX Workflow
 
-## Target Flow
+## Flow
 
-The mature workflow is intended to proceed in four stages.
+The workflow proceeds in four stages.
 
 1. Inspect the JSON or JSONL input through the upstream CLI.
 2. Propose a mapping covering sheets, columns, types, JSON paths, and parent-child
@@ -14,7 +14,7 @@ The mature workflow is intended to proceed in four stages.
 
 ## Input Analysis
 
-The upstream inspection result should identify, when supported:
+The upstream inspection result identifies:
 
 - input kind: JSON array, JSONL, or single JSON object
 - record count and bounded sampling conditions
@@ -27,7 +27,7 @@ inspection output and bounded samples.
 
 ## Mapping Review
 
-A future mapping proposal should make these decisions reviewable:
+A mapping v1 proposal makes these decisions reviewable:
 
 - sheet names and collision handling
 - column names, order, source JSON paths, and target types
@@ -36,9 +36,11 @@ A future mapping proposal should make these decisions reviewable:
 - parent identifiers and child element ordering
 - handling of missing, null, mixed, unsafe, or unsupported values
 
-Do not invent the machine-readable mapping schema before the upstream contract
-is published. Human-readable planning is not a substitute for validated CLI
-input.
+Mapping JSON uses `schemaVersion: 1`, exactly one root sheet, optional direct
+child sheets, explicit tracking columns, and typed columns. Read
+[../runtime/mapping-v1.md](../runtime/mapping-v1.md) for the published shape,
+supported types, and v1 limits. Always run `validate-mapping`; human-readable
+planning is not a substitute for validated CLI input.
 
 ## Write Boundary
 
@@ -46,8 +48,10 @@ Writing an XLSX file requires human approval or an unambiguous instruction that
 identifies the reviewed mapping and output target. Existing files must not be
 overwritten implicitly.
 
-## Current Limitation
+## Result Review
 
-The `0.2.2` scaffold is `handoff-only`. Because no upstream runtime artifact has
-been received, inspection, mapping validation, conversion, and workbook result
-verification are not executable yet.
+Use `--result-format json`. Check the exit code, `status`, `diagnostics[]`, and
+`artifacts[]`. Safe warnings may accompany exit code `0`; semantic or
+processing failures use exit code `1`, usage/malformed-input failures use `2`,
+and unexpected runtime failures use `3`. Do not treat a path as a completed
+XLSX artifact unless the successful result lists it.
