@@ -30,15 +30,10 @@ jobs:
         with:
           node-version: 24
 
-      - name: Verify initial handoff-only runtime state
-        shell: bash
+      - name: Verify bundled CLI runtime
         run: |
-          set -euo pipefail
-          test -d "skills/igapyon-miku-json2xlsx/runtime"
-          if compgen -G "skills/igapyon-miku-json2xlsx/runtime/*.jar" > /dev/null || compgen -G "skills/igapyon-miku-json2xlsx/runtime/*.mjs" > /dev/null; then
-            echo "Runtime artifacts require explicit metadata smoke checks before release." >&2
-            exit 1
-          fi
+          node skills/igapyon-miku-json2xlsx/lib/run-miku-json2xlsx.mjs --version
+          node skills/igapyon-miku-json2xlsx/lib/run-miku-json2xlsx.mjs --help
 
       - name: Build release bundle
         run: npm run build

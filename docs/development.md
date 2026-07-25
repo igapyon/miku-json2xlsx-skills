@@ -4,16 +4,18 @@
 
 - product repository: <https://github.com/igapyon/miku-json2xlsx>
 - compatibility branch: `devel`
-- checked commit: `eb0719d8c84ae018d041ccfd50205cd53f8ab8b4`
-- checked release: `v0.2.0`
-- checked state on 2026-07-23: initial TypeScript CLI and bundle generation
-- GitHub Release assets: none
+- checked commit: `9cf12f8e3f8d0722fd79b4734b9198647332b986`
+- checked release: `v0.3.0`
+- checked state on 2026-07-25: JSON/JSONL inspection, mapping validation,
+  typed XLSX conversion, streaming JSONL conversion, and release assets
+- received executable asset: `miku-json2xlsx-0.3.0.mjs`
+- provenance and SHA-256 source:
+  `skills/igapyon-miku-json2xlsx/runtime/runtime-manifest.json`
 
-The upstream source can generate `bundle/miku-json2xlsx.mjs` as an executable
-CLI bundle and `bundle/miku-json2xlsx-runtime.mjs` as an importable runtime
-bundle. The current CLI contract implements metadata commands only. Runtime
-wiring in this repository must wait for a human-provided executable artifact
-from a documented distribution source.
+The bundled executable runtime supports `--help`, `--version`, `inspect`,
+`validate-mapping`, and `convert`. The upstream importable runtime bundle and
+source archive are separate release artifacts and are not required for normal
+Skill execution.
 
 ## miku-soft Reference Check
 
@@ -36,7 +38,7 @@ Adopted decisions:
 - repository/package and installed skill names are intentionally separate
 - explicit opt-in activation
 - canonical skill files under `skills/igapyon-miku-json2xlsx/`
-- skill-local references and future runtime artifacts
+- skill-local references and versioned runtime artifacts
 - bundle and release-zip construction from the initial scaffold
 - tests that verify the isolated install shape and release contents
 
@@ -46,17 +48,15 @@ Rejected decisions:
 - declaring the skill CLI-backed before an upstream runtime is received
 - adding MCP behavior without an upstream MCP contract
 
-## Initial Maturity
+## Current Maturity
 
-The initial maturity is `handoff-only`. Upstream metadata runtime code now
-exists, but no versioned Release asset has been received and conversion remains
-unimplemented upstream. The skill may explain the intended workflow and
-prepare human-reviewable requirements, but it must not invent an unpublished
-mapping schema or claim an XLSX was generated.
+The current maturity is CLI-backed. The Skill resolves the versioned executable
+declared by `runtime-manifest.json`, verifies its SHA-256, and invokes only that
+upstream CLI. It does not fall back to a parallel converter or the importable
+runtime bundle.
 
-The target maturity is CLI-backed. After an upstream runtime is received, add
-runtime lookup, metadata smoke tests, operation contract tests, and end-to-end
-conversion fixtures before changing the declared backend policy.
+Mapping decisions remain an Agent-and-human review responsibility. The CLI
+validates the published mapping v1 contract and performs the conversion.
 
 ## Verification
 
