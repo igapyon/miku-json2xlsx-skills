@@ -3,7 +3,7 @@
 // package.json
 var package_default = {
   name: "miku-json2xlsx",
-  version: "0.3.0",
+  version: "0.4.1",
   private: true,
   description: "Local-first deterministic JSON and JSONL to XLSX conversion CLI.",
   type: "module",
@@ -26,6 +26,7 @@ var package_default = {
     "build:all": "npm run build:bundle",
     "smoke:bundle": "node scripts/smoke-cli-bundle.mjs",
     "smoke:runtime": "node scripts/smoke-runtime-bundle.mjs",
+    "verify:core-zip-compat": "npm run build --silent && node scripts/verify-core-zip-compat.mjs",
     "prebenchmark:jsonl": "npm run build --silent",
     "benchmark:jsonl": "node scripts/benchmark-jsonl-stream.mjs"
   },
@@ -46,7 +47,7 @@ var package_default = {
 
 // src/ts/cli-commands.ts
 import { access, readFile as readFile2, rename, unlink, writeFile } from "node:fs/promises";
-import { dirname, join as join2 } from "node:path";
+import { basename, dirname, join as join2 } from "node:path";
 
 // src/ts/cli-output.ts
 var DEFAULT_IO = {
@@ -99,8 +100,12 @@ function writeInspectionText(report, source, io) {
   }
 }
 
-// src/ts/office-zip.ts
+// src/ts/stored-zip.ts
 import { open, stat } from "node:fs/promises";
+var ZIP32_MAX_ENTRY_COUNT = 65535;
+var ZIP32_MAX_VALUE = 4294967295;
+var ZIP_MAX_PATH_BYTES = 65535;
+var FILE_CHUNK_SIZE = 64 * 1024;
 var encoder = new TextEncoder();
 var crcTable = new Uint32Array(256);
 for (let index = 0; index < 256; index += 1) {
@@ -129,7 +134,9 @@ function writeUint32(buffer, offset, value) {
   buffer[offset + 3] = value >>> 24 & 255;
 }
 function concatBytes(parts) {
-  const output = new Uint8Array(parts.reduce((total, part) => total + part.length, 0));
+  const length = parts.reduce((total, part) => total + part.length, 0);
+  assertZip32Value(length, "ZIP section size");
+  const output = new Uint8Array(length);
   let offset = 0;
   for (const part of parts) {
     output.set(part, offset);
@@ -137,18 +144,44 @@ function concatBytes(parts) {
   }
   return output;
 }
-function normalizePath(path) {
-  const normalized = path.replace(/\\/g, "/").replace(/^\/+/, "");
-  if (!normalized || normalized.split("/").some((segment) => segment === "..")) {
-    throw new Error(`Invalid Office package part path: ${path}`);
+function normalizeStoredZipPath(path) {
+  const withoutHash = path.split("#", 1)[0] ?? "";
+  const raw = withoutHash.replace(/\\/g, "/").replace(/^\/+/, "");
+  const parts = [];
+  for (const part of raw.split("/")) {
+    if (part === "" || part === ".") continue;
+    if (part === "..") {
+      if (parts.length === 0) throw new Error(`ZIP entry path escapes package root: ${path}`);
+      parts.pop();
+      continue;
+    }
+    parts.push(part);
   }
-  return normalized;
+  if (parts.length === 0) throw new Error(`ZIP entry path is empty: ${path}`);
+  return parts.join("/");
 }
 function comparePaths(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
 }
-function localHeader(path, crc, size) {
+function assertZip32Value(value, label) {
+  if (!Number.isSafeInteger(value) || value < 0 || value > ZIP32_MAX_VALUE) {
+    throw new Error(`${label} exceeds the ZIP32 limit: ${value}`);
+  }
+}
+function assertEntryCount(count) {
+  if (count > ZIP32_MAX_ENTRY_COUNT) {
+    throw new Error(`ZIP entry count exceeds the ZIP32 limit: ${count}`);
+  }
+}
+function encodedPath(path) {
   const name = encoder.encode(path);
+  if (name.length > ZIP_MAX_PATH_BYTES) {
+    throw new Error(`ZIP entry path exceeds 65535 UTF-8 bytes: ${path}`);
+  }
+  return name;
+}
+function localHeader(path, crc, size) {
+  const name = encodedPath(path);
   const local = new Uint8Array(30 + name.length);
   writeUint32(local, 0, 67324752);
   writeUint16(local, 4, 20);
@@ -164,7 +197,7 @@ function localHeader(path, crc, size) {
   return local;
 }
 function centralHeader(path, crc, size, localOffset) {
-  const name = encoder.encode(path);
+  const name = encodedPath(path);
   const central = new Uint8Array(46 + name.length);
   writeUint32(central, 0, 33639248);
   writeUint16(central, 4, 20);
@@ -181,34 +214,50 @@ function centralHeader(path, crc, size, localOffset) {
   central.set(name, 46);
   return central;
 }
-function writeOfficeZip(entries) {
-  const prepared = entries.map((entry) => ({
-    path: normalizePath(entry.path),
-    data: typeof entry.data === "string" ? encoder.encode(entry.data) : entry.data
-  })).sort((left, right) => comparePaths(left.path, right.path));
+function endOfCentralDirectory(entryCount, centralSize, centralOffset) {
+  assertEntryCount(entryCount);
+  assertZip32Value(centralSize, "ZIP central directory size");
+  assertZip32Value(centralOffset, "ZIP central directory offset");
+  const end = new Uint8Array(22);
+  writeUint32(end, 0, 101010256);
+  writeUint16(end, 8, entryCount);
+  writeUint16(end, 10, entryCount);
+  writeUint32(end, 12, centralSize);
+  writeUint32(end, 16, centralOffset);
+  return end;
+}
+function prepareMemoryEntries(entries) {
+  assertEntryCount(entries.length);
+  return entries.map((entry) => {
+    const data = typeof entry.data === "string" ? encoder.encode(entry.data) : entry.data;
+    assertZip32Value(data.length, `ZIP entry size for ${entry.path}`);
+    return {
+      path: normalizeStoredZipPath(entry.path),
+      data,
+      size: data.length,
+      crc: crc32(data)
+    };
+  }).sort((left, right) => comparePaths(left.path, right.path));
+}
+function writeStoredZip(entries) {
+  const prepared = prepareMemoryEntries(entries);
   const localParts = [];
   const centralParts = [];
   let localOffset = 0;
   for (const entry of prepared) {
-    const crc = crc32(entry.data);
-    const local = localHeader(entry.path, crc, entry.data.length);
-    const central = centralHeader(entry.path, crc, entry.data.length, localOffset);
+    assertZip32Value(localOffset, "ZIP local entry offset");
+    const local = localHeader(entry.path, entry.crc, entry.size);
+    centralParts.push(centralHeader(entry.path, entry.crc, entry.size, localOffset));
     localParts.push(local, entry.data);
-    centralParts.push(central);
-    localOffset += local.length + entry.data.length;
+    localOffset += local.length + entry.size;
   }
   const centralDirectory = concatBytes(centralParts);
-  const end = new Uint8Array(22);
-  writeUint32(end, 0, 101010256);
-  writeUint16(end, 8, prepared.length);
-  writeUint16(end, 10, prepared.length);
-  writeUint32(end, 12, centralDirectory.length);
-  writeUint32(end, 16, localOffset);
+  const end = endOfCentralDirectory(prepared.length, centralDirectory.length, localOffset);
   return concatBytes([...localParts, centralDirectory, end]);
 }
 async function fileCrc32(filePath) {
   const handle = await open(filePath, "r");
-  const buffer = new Uint8Array(64 * 1024);
+  const buffer = new Uint8Array(FILE_CHUNK_SIZE);
   let crc = 4294967295;
   try {
     while (true) {
@@ -221,61 +270,80 @@ async function fileCrc32(filePath) {
   }
   return (crc ^ 4294967295) >>> 0;
 }
-async function copyFileToHandle(filePath, output) {
+async function prepareEntries(entries) {
+  assertEntryCount(entries.length);
+  const prepared = [];
+  for (const entry of entries) {
+    const entryPath = normalizeStoredZipPath(entry.path);
+    if ("data" in entry) {
+      const data = typeof entry.data === "string" ? encoder.encode(entry.data) : entry.data;
+      assertZip32Value(data.length, `ZIP entry size for ${entry.path}`);
+      prepared.push({ path: entryPath, data, size: data.length, crc: crc32(data) });
+      continue;
+    }
+    const details = await stat(entry.filePath);
+    assertZip32Value(details.size, `ZIP entry size for ${entry.path}`);
+    prepared.push({
+      path: entryPath,
+      filePath: entry.filePath,
+      size: details.size,
+      crc: await fileCrc32(entry.filePath)
+    });
+  }
+  return prepared.sort((left, right) => comparePaths(left.path, right.path));
+}
+async function copyFileToSink(filePath, sink) {
   const input = await open(filePath, "r");
-  const buffer = new Uint8Array(64 * 1024);
+  const buffer = new Uint8Array(FILE_CHUNK_SIZE);
   try {
     while (true) {
       const { bytesRead } = await input.read(buffer, 0, buffer.length, null);
       if (bytesRead === 0) break;
-      await output.write(buffer.subarray(0, bytesRead));
+      await sink.write(buffer.subarray(0, bytesRead));
     }
   } finally {
     await input.close();
   }
 }
-async function writeOfficeZipFile(outputPath, entries) {
-  const prepared = await Promise.all(entries.map(async (entry) => {
-    const entryPath = normalizePath(entry.path);
-    if ("data" in entry) {
-      const data = typeof entry.data === "string" ? encoder.encode(entry.data) : entry.data;
-      return { path: entryPath, data, size: data.length, crc: crc32(data) };
-    }
-    const details = await stat(entry.filePath);
-    if (details.size > 4294967295) throw new Error(`Office package part exceeds ZIP32 size: ${entry.path}`);
-    return {
-      path: entryPath,
-      filePath: entry.filePath,
-      size: details.size,
-      crc: await fileCrc32(entry.filePath)
-    };
-  }));
-  prepared.sort((left, right) => comparePaths(left.path, right.path));
-  const output = await open(outputPath, "w");
+async function writeStoredZipToSink(entries, sink) {
+  const prepared = await prepareEntries(entries);
   const centralParts = [];
   let localOffset = 0;
+  for (const entry of prepared) {
+    assertZip32Value(localOffset, "ZIP local entry offset");
+    const local = localHeader(entry.path, entry.crc, entry.size);
+    await sink.write(local);
+    if ("data" in entry) await sink.write(entry.data);
+    else await copyFileToSink(entry.filePath, sink);
+    centralParts.push(centralHeader(entry.path, entry.crc, entry.size, localOffset));
+    localOffset += local.length + entry.size;
+  }
+  const centralDirectory = concatBytes(centralParts);
+  const end = endOfCentralDirectory(prepared.length, centralDirectory.length, localOffset);
+  await sink.write(centralDirectory);
+  await sink.write(end);
+}
+async function writeStoredZipFile(outputPath, entries) {
+  const output = await open(outputPath, "w");
   try {
-    for (const entry of prepared) {
-      const local = localHeader(entry.path, entry.crc, entry.size);
-      await output.write(local);
-      if (entry.data !== void 0) await output.write(entry.data);
-      else await copyFileToHandle(entry.filePath, output);
-      centralParts.push(centralHeader(entry.path, entry.crc, entry.size, localOffset));
-      localOffset += local.length + entry.size;
-    }
-    const centralDirectory = concatBytes(centralParts);
-    const end = new Uint8Array(22);
-    writeUint32(end, 0, 101010256);
-    writeUint16(end, 8, prepared.length);
-    writeUint16(end, 10, prepared.length);
-    writeUint32(end, 12, centralDirectory.length);
-    writeUint32(end, 16, localOffset);
-    await output.write(centralDirectory);
-    await output.write(end);
+    await writeStoredZipToSink(entries, {
+      async write(data) {
+        let offset = 0;
+        while (offset < data.length) {
+          const { bytesWritten } = await output.write(data, offset, data.length - offset);
+          if (bytesWritten === 0) throw new Error(`Unable to make progress writing ZIP output: ${outputPath}`);
+          offset += bytesWritten;
+        }
+      }
+    });
   } finally {
     await output.close();
   }
 }
+
+// src/ts/office-zip.ts
+var writeOfficeZip = writeStoredZip;
+var writeOfficeZipFile = writeStoredZipFile;
 
 // src/ts/xlsx-writer.ts
 function xlsxXml(value) {
@@ -294,17 +362,17 @@ function xlsxColumnName(index) {
 function excelDate(value) {
   return value.getTime() / 864e5 + 25569;
 }
-function cellXml(value, row, column) {
+function cellXml(value, row, column, header) {
   const ref = `${xlsxColumnName(column)}${row + 1}`;
   if (value === void 0) return `<c r="${ref}"/>`;
   if (value instanceof Date) return `<c r="${ref}" s="1"><v>${excelDate(value)}</v></c>`;
   if (typeof value === "number") return `<c r="${ref}"><v>${value}</v></c>`;
   if (typeof value === "boolean") return `<c r="${ref}" t="b"><v>${value ? 1 : 0}</v></c>`;
-  const style = row === 0 ? ` s="2"` : "";
+  const style = header ? ` s="2"` : "";
   return `<c r="${ref}" t="inlineStr"${style}><is><t xml:space="preserve">${xlsxXml(value)}</t></is></c>`;
 }
-function xlsxRowXml(row, rowIndex) {
-  return `<row r="${rowIndex + 1}">${row.map((value, columnIndex) => cellXml(value, rowIndex, columnIndex)).join("")}</row>`;
+function xlsxRowXml(row, rowIndex, header = rowIndex === 0) {
+  return `<row r="${rowIndex + 1}">${row.map((value, columnIndex) => cellXml(value, rowIndex, columnIndex, header)).join("")}</row>`;
 }
 function xlsxWorksheetStart(columnCount, rowCount) {
   const range = `A1:${xlsxColumnName(Math.max(columnCount, 1) - 1)}${Math.max(rowCount, 1)}`;
@@ -324,7 +392,8 @@ function xlsxWorksheetEnd(columnCount, rowCount) {
 function worksheetXml(sheet) {
   const maxColumns = Math.max(1, ...sheet.rows.map((row) => row.length));
   const lastRow = Math.max(sheet.rows.length, 1);
-  const rows = sheet.rows.map((row, rowIndex) => xlsxRowXml(row, rowIndex)).join("");
+  const headerRows = new Set(sheet.headerRows ?? [0]);
+  const rows = sheet.rows.map((row, rowIndex) => xlsxRowXml(row, rowIndex, headerRows.has(rowIndex))).join("");
   return `${xlsxWorksheetStart(maxColumns, lastRow)}${rows}${xlsxWorksheetEnd(maxColumns, lastRow)}`;
 }
 function relationships(items) {
@@ -380,6 +449,140 @@ function writeXlsx(sheets) {
     ...xlsxPackageEntries(sheets.map((sheet) => sheet.name)),
     ...sheets.map((sheet, index) => ({ path: `xl/worksheets/sheet${index + 1}.xml`, data: worksheetXml(sheet) }))
   ]);
+}
+
+// src/ts/workbook-cover.ts
+var WORKBOOK_COVER_SCHEMA_VERSION = 1;
+var WORKBOOK_COVER_SHEET_NAME = "README";
+function fileNameOnly(value, fallback) {
+  const normalized = value?.replace(/\\/g, "/");
+  const name = normalized?.slice(normalized.lastIndexOf("/") + 1);
+  return name || fallback;
+}
+function columnMeaning(role, sheet, column) {
+  if (role === "parent-key") return `Links to ${sheet.parentSheet}.${sheet.parentIdColumn}`;
+  if (role === "array-order") return "One-based position in the source array";
+  if (role === "source-record") return "One-based position of the source record";
+  if (role === "generated") return "Generated parent record identifier";
+  if (column?.sourcePath === sheet.sourcePath && sheet.kind === "child") {
+    return "Array element value";
+  }
+  return "Value extracted from the source JSON";
+}
+function dataColumnRow(sheet, column) {
+  return [
+    sheet.name,
+    column.name,
+    "data",
+    column.sourcePath,
+    column.type,
+    columnMeaning("data", sheet, column)
+  ];
+}
+function generatedColumnRows(sheet) {
+  if (sheet.kind === "root") {
+    return [
+      [
+        sheet.name,
+        sheet.recordIdColumn,
+        "generated",
+        "",
+        "number",
+        columnMeaning("generated", sheet)
+      ],
+      [
+        sheet.name,
+        sheet.sourceRecordColumn,
+        "source-record",
+        "",
+        "number",
+        columnMeaning("source-record", sheet)
+      ]
+    ];
+  }
+  return [
+    [
+      sheet.name,
+      sheet.parentIdColumn,
+      "parent-key",
+      "",
+      "number",
+      columnMeaning("parent-key", sheet)
+    ],
+    [
+      sheet.name,
+      sheet.childOrderColumn,
+      "array-order",
+      "",
+      "number",
+      columnMeaning("array-order", sheet)
+    ],
+    [
+      sheet.name,
+      sheet.sourceRecordColumn,
+      "source-record",
+      "",
+      "number",
+      columnMeaning("source-record", sheet)
+    ]
+  ];
+}
+function createWorkbookCoverSheet(mapping, metadata = {}) {
+  const root = mapping.sheets.find((sheet) => sheet.kind === "root");
+  const rows = [];
+  const headerRows = [];
+  const section = (title, headers, body) => {
+    if (rows.length > 0) rows.push([]);
+    headerRows.push(rows.length);
+    rows.push([title]);
+    headerRows.push(rows.length);
+    rows.push(headers);
+    rows.push(...body);
+  };
+  section("Workbook Metadata", ["Field", "Value"], [
+    ["Workbook Format", "miku-json2xlsx workbook"],
+    ["Cover Schema Version", String(WORKBOOK_COVER_SCHEMA_VERSION)],
+    ["Description", "Normalized tabular representation of JSON or JSONL records"],
+    ["Source File Name", fileNameOnly(metadata.sourceFileName, "runtime")],
+    ["Source Format", metadata.sourceFormat ?? "JSON"],
+    ["Mapping File Name", fileNameOnly(metadata.mappingFileName, "runtime")],
+    ["Root Sheet", root.name],
+    ["Record Order", "Preserves source record order"],
+    ["Child Row Order", "Preserves source array element order"],
+    ["Generated By", "miku-json2xlsx"],
+    ["Generator Version", package_default.version]
+  ]);
+  section("Reading Instructions", ["Instruction"], [[
+    "Read this README sheet first. Then read the root sheet. Child sheets contain expanded JSON arrays. Join child rows to the root sheet using the documented parent-key column."
+  ]]);
+  section(
+    "Sheet Catalog",
+    ["Sheet", "Kind", "Source JSON Path", "Parent Sheet", "Description"],
+    mapping.sheets.map((sheet) => [
+      sheet.name,
+      sheet.kind,
+      sheet.sourcePath,
+      sheet.parentSheet ?? "",
+      sheet.kind === "root" ? "One row per input record" : "Expanded source JSON array"
+    ])
+  );
+  section(
+    "Column Catalog",
+    ["Sheet", "Column", "Role", "JSON Path", "Data Type", "Meaning"],
+    mapping.sheets.flatMap((sheet) => [
+      ...sheet.columns.map((column) => dataColumnRow(sheet, column)),
+      ...generatedColumnRows(sheet)
+    ])
+  );
+  section("Data Conventions", ["Convention", "Meaning"], [
+    ["Blank Cell", "The source value is missing or null"],
+    ["Record Order", "Root rows preserve source record order"],
+    ["Child Row Order", "Child rows preserve source array element order"],
+    ["Parent Join", "Join child rows to the root sheet using the documented parent-key column"],
+    ["Formula Safety", "Formula-like source strings are stored as text and are not executed"],
+    ["Cell Semantics", "Number, boolean, datetime, string, and blank use corresponding XLSX cell semantics"]
+  ]);
+  return { name: WORKBOOK_COVER_SHEET_NAME, rows, headerRows };
 }
 
 // src/ts/converter.ts
@@ -631,7 +834,7 @@ function convertRecordToMappedRows(record, definitions) {
   }
   return { rowsBySheet, diagnostics };
 }
-function convertRecordsToXlsx(records, mapping) {
+function convertRecordsToXlsx(records, mapping, options = {}) {
   const prepared = prepareMappedSheets(mapping);
   const diagnostics = [...prepared.diagnostics];
   if (diagnostics.some((diagnostic2) => diagnostic2.severity === "error")) {
@@ -675,7 +878,10 @@ function convertRecordsToXlsx(records, mapping) {
     command: "convert",
     diagnostics,
     artifacts: [],
-    xlsx: writeXlsx(sheets)
+    xlsx: writeXlsx([
+      createWorkbookCoverSheet(mapping, options.workbookMetadata),
+      ...sheets
+    ])
   };
 }
 
@@ -841,6 +1047,7 @@ var SHEET_KEYS = /* @__PURE__ */ new Set([
 var COLUMN_KEYS = /* @__PURE__ */ new Set(["name", "sourcePath", "type"]);
 var JSON_PATH = /^\$(?:\.[A-Za-z_][A-Za-z0-9_]*|\[\])*$/;
 var INVALID_SHEET_NAME = /[\\/?*[\]:]/;
+var RESERVED_SHEET_NAMES = /* @__PURE__ */ new Set(["readme"]);
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -915,6 +1122,15 @@ function validateMapping(value) {
     const sourcePath = requiredString(rawSheet, "sourcePath", sheetPath, diagnostics);
     if (name) {
       const normalizedName = name.toLowerCase();
+      if (RESERVED_SHEET_NAMES.has(normalizedName)) {
+        diagnostics.push(
+          diagnostic(
+            "MAPPING_RESERVED_SHEET_NAME",
+            `Sheet name is reserved by the generated workbook cover: ${name}`,
+            `${sheetPath}.name`
+          )
+        );
+      }
       if (normalizedSheetNames.has(normalizedName)) {
         diagnostics.push(diagnostic("MAPPING_DUPLICATE_SHEET", `Sheet name is duplicated for Excel: ${name}`, `${sheetPath}.name`));
       }
@@ -1070,6 +1286,22 @@ function formatFromSourceName(sourceName) {
   }
   return void 0;
 }
+function detectInputFormat(text, options = {}) {
+  const sourceName = options.sourceName ?? "stdin";
+  const configured = options.format ?? formatFromSourceName(sourceName);
+  if (configured) return configured;
+  const firstCharacter = text.trimStart()[0];
+  if (firstCharacter === "[") return "json";
+  if (firstCharacter === "{") {
+    try {
+      JSON.parse(text);
+      return "json";
+    } catch {
+      return "jsonl";
+    }
+  }
+  return "jsonl";
+}
 function parseJson(text, sourceName) {
   let value;
   try {
@@ -1113,35 +1345,34 @@ function parseJsonl(text, sourceName) {
 }
 function readRecords(text, options = {}) {
   const sourceName = options.sourceName ?? "stdin";
-  const format = options.format ?? formatFromSourceName(sourceName);
-  if (format) {
-    return format === "json" ? parseJson(text, sourceName) : parseJsonl(text, sourceName);
-  }
-  const firstCharacter = text.trimStart()[0];
-  if (firstCharacter === "[") {
-    return parseJson(text, sourceName);
-  }
-  if (firstCharacter === "{") {
-    try {
-      return parseJson(text, sourceName);
-    } catch {
-      return parseJsonl(text, sourceName);
-    }
-  }
-  return parseJsonl(text, sourceName);
+  return detectInputFormat(text, options) === "json" ? parseJson(text, sourceName) : parseJsonl(text, sourceName);
 }
 
 // src/ts/node-input.ts
-async function readRecordsFromFile(path, options = {}) {
+async function readRecordsFromFileWithFormat(path, options = {}) {
   const text = await readFile(path, "utf8");
-  return readRecords(text, { ...options, sourceName: path });
+  const readOptions = { ...options, sourceName: path };
+  return {
+    records: readRecords(text, readOptions),
+    format: detectInputFormat(text, readOptions)
+  };
 }
-async function readRecordsFromStdin(input = process.stdin, options = {}) {
+async function readRecordsFromFile(path, options = {}) {
+  return (await readRecordsFromFileWithFormat(path, options)).records;
+}
+async function readRecordsFromStdinWithFormat(input = process.stdin, options = {}) {
   let text = "";
   for await (const chunk of input) {
     text += chunk.toString();
   }
-  return readRecords(text, { ...options, sourceName: "stdin" });
+  const readOptions = { ...options, sourceName: "stdin" };
+  return {
+    records: readRecords(text, readOptions),
+    format: detectInputFormat(text, readOptions)
+  };
+}
+async function readRecordsFromStdin(input = process.stdin, options = {}) {
+  return (await readRecordsFromStdinWithFormat(input, options)).records;
 }
 async function* readJsonlRecordsFromStream(input, sourceName = "stdin") {
   const lines = createInterface({
@@ -1177,6 +1408,12 @@ import { tmpdir } from "node:os";
 var EXCEL_MAX_ROWS2 = 1048576;
 var MAX_DIAGNOSTICS = 1e3;
 var MAX_UNKNOWN_PATHS = 1e3;
+function worksheetXml2(sheet) {
+  const columnCount = Math.max(1, ...sheet.rows.map((row) => row.length));
+  const rowCount = Math.max(sheet.rows.length, 1);
+  const headerRows = new Set(sheet.headerRows ?? [0]);
+  return `${xlsxWorksheetStart(columnCount, rowCount)}${sheet.rows.map((row, index) => xlsxRowXml(row, index, headerRows.has(index))).join("")}${xlsxWorksheetEnd(columnCount, rowCount)}`;
+}
 function mappedPaths(mapping) {
   return new Set(mapping.sheets.flatMap((sheet) => [
     sheet.sourcePath,
@@ -1338,10 +1575,15 @@ async function convertJsonlStreamToXlsxFile(records, mapping, outputPath, option
     }
     for (const spool of spools) await finalizeWorksheet(spool);
     handlesClosed = true;
+    const cover = createWorkbookCoverSheet(mapping, options.workbookMetadata);
     await writeOfficeZipFile(outputPath, [
-      ...xlsxPackageEntries(prepared.sheets.map(({ sheet }) => sheet.name)),
+      ...xlsxPackageEntries([cover.name, ...prepared.sheets.map(({ sheet }) => sheet.name)]),
+      {
+        path: "xl/worksheets/sheet1.xml",
+        data: worksheetXml2(cover)
+      },
       ...spools.map((spool, index) => ({
-        path: `xl/worksheets/sheet${index + 1}.xml`,
+        path: `xl/worksheets/sheet${index + 2}.xml`,
         filePath: spool.worksheetPath
       }))
     ]);
@@ -1483,13 +1725,20 @@ async function runConvert(options, io) {
   const temporaryPath = join2(dirname(options.output), `.${Date.now()}-${process.pid}.miku-json2xlsx.tmp`);
   const streaming = options.inputFormat === "jsonl" || options.inputFormat === void 0 && options.input !== "-" && options.input.toLowerCase().endsWith(".jsonl");
   let conversionDetails = {};
+  const sourceFileName = options.input === "-" ? "stdin" : basename(options.input);
+  const mappingFileName = basename(options.mapping);
   try {
     if (streaming) {
       const records = options.input === "-" ? readJsonlRecordsFromStream(process.stdin) : readJsonlRecordsFromFile(options.input);
       const conversion = await convertJsonlStreamToXlsxFile(records, validation.mapping, temporaryPath, {
         progressInterval: options.progressInterval,
         onProgress: (count) => io.stderr.write(`progress: ${count} records processed
-`)
+`),
+        workbookMetadata: {
+          sourceFileName,
+          sourceFormat: "JSONL",
+          mappingFileName
+        }
       });
       if (conversion.status === "failure") {
         await unlink(temporaryPath).catch(() => void 0);
@@ -1503,8 +1752,14 @@ async function runConvert(options, io) {
       };
     } else {
       const readOptions = options.inputFormat === void 0 ? {} : { format: options.inputFormat };
-      const records = options.input === "-" ? await readRecordsFromStdin(process.stdin, readOptions) : await readRecordsFromFile(options.input, readOptions);
-      const conversion = convertRecordsToXlsx(records, validation.mapping);
+      const input = options.input === "-" ? await readRecordsFromStdinWithFormat(process.stdin, readOptions) : await readRecordsFromFileWithFormat(options.input, readOptions);
+      const conversion = convertRecordsToXlsx(input.records, validation.mapping, {
+        workbookMetadata: {
+          sourceFileName,
+          sourceFormat: input.format === "jsonl" ? "JSONL" : "JSON",
+          mappingFileName
+        }
+      });
       if (conversion.status === "failure" || !conversion.xlsx) {
         return writeExpectedFailure(conversion, options.resultFormat, io);
       }
@@ -1539,27 +1794,45 @@ async function runConvert(options, io) {
 }
 
 // src/ts/cli-help.ts
-var HELP_TEXT = `miku-json2xlsx - local-first JSON / JSONL to XLSX converter
+var HELP_TEXT = `miku-json2xlsx - beta local-first JSON / JSONL to XLSX converter
 
 Usage:
-  miku-json2xlsx convert --input <path|-> --output <path.xlsx> --mapping <path> [options]
   miku-json2xlsx inspect --input <path|-> [options]
-  miku-json2xlsx validate-mapping --mapping <path> [--result-format text|json]
+  miku-json2xlsx validate-mapping --mapping <path> [options]
+  miku-json2xlsx convert --input <path|-> --output <path.xlsx> --mapping <path> [options]
   miku-json2xlsx --help
   miku-json2xlsx --version
 
 Description:
   Inspects JSON / JSONL structure for paths, types, missing and null values,
   nesting, array element types, and bounded representative samples. The convert
-  command writes typed root records and mapped child arrays to deterministic
-  XLSX sheets while retaining record and parent tracking columns.
+  command writes a self-describing README cover, typed root records, and mapped
+  child arrays to deterministic XLSX sheets while retaining tracking columns.
+  This is beta software: preserve the source data and review generated workbooks.
 
 Recommended agent workflow:
   1. Run inspect --result-format json and review inspection.scope.
-  2. Create an explicit mapping, then run validate-mapping.
+  2. Create an explicit mapping, then run validate-mapping --result-format json.
   3. Run convert --result-format json with the validated mapping.
   4. Check the exit code, status, diagnostics, artifacts, and stream statistics.
   The CLI does not infer or approve a mapping with AI.
+
+Minimal mapping v1:
+  {
+    "schemaVersion": 1,
+    "sheets": [{
+      "name": "Records",
+      "kind": "root",
+      "sourcePath": "$",
+      "recordIdColumn": "record_id",
+      "sourceRecordColumn": "source_record",
+      "columns": [
+        { "name": "id", "sourcePath": "$.id", "type": "number" }
+      ]
+    }]
+  }
+  A child sheet additionally requires parentSheet, parentIdColumn,
+  childOrderColumn, sourceRecordColumn, and a sourcePath ending in [].
 
 Default behavior:
   Input, output, and mapping must be explicit. Existing output is protected
@@ -1569,36 +1842,33 @@ Default behavior:
 Inputs:
   --input accepts a UTF-8 JSON / JSONL path or - for stdin.
   inspect and convert can explicitly select json or jsonl with --input-format.
-  --mapping accepts an explicit mapping path.
-  validate-mapping reads a UTF-8 JSON mapping and reports its schema diagnostics.
-  convert reads the input and mapping, then writes the requested XLSX artifact.
+  --mapping accepts a UTF-8 JSON mapping v1 file.
   JSONL input is processed incrementally when selected by .jsonl extension or
   --input-format jsonl. Progress is written only to stderr.
 
 Outputs:
   --help writes this runtime contract to stdout.
   --version writes the product name and package version to stdout.
-  A machine-readable operation result is written to stdout with
-  --result-format json. Text diagnostics are written to stderr.
-  XLSX is written only to the explicit --output path; binary XLSX is never mixed
-  into normal stdout.
+  --result-format json writes one machine-readable operation result to stdout.
+  Text diagnostics and JSONL progress are written to stderr.
+  convert writes one XLSX only to --output; binary XLSX is never mixed into
+  normal stdout and no sidecar files are generated.
 
 Generated artifacts:
-  npm run build writes development modules under dist/.
-  npm run build:bundle writes generated release candidates under bundle/.
-  Generated artifacts are not hand-maintained and are ignored by Git.
+  Normal convert usage generates the XLSX named by --output. Its first sheet is
+  an English README data dictionary, followed by the root and mapped child
+  sheets. Development builds also create ignored dist/ and bundle/ files.
 
 Overwrite behavior:
   --overwrite explicitly permits replacing --output. Conversion completes to a
   temporary file before the output path is replaced.
-  Build commands replace generated development and bundle files.
 
 Machine-readable output contract:
   --result-format json writes one stable JSON object to stdout. Inspect results
   use schemaVersion 1. Expected failures use status=failure and structured
-  diagnostics. Progress or runtime log text is not mixed into stdout.
-  Successful convert results list completed XLSX files in artifacts. Streamed
-  JSONL results also report inputMode, recordsProcessed, and rowsWritten.
+  diagnostics. Successful convert results list completed XLSX files in
+  artifacts. Streamed JSONL results also report inputMode, recordsProcessed,
+  and rowsWritten.
 
 Diagnostics / warnings:
   Diagnostics contain code, message, severity, and optional source location.
@@ -1618,35 +1888,44 @@ Exit codes:
   2  invalid CLI usage or malformed input without a safe operation result
   3  unexpected runtime error
 
-Options:
+Convert options:
   --input <path|->          JSON / JSONL file path, or - for stdin.
   --input-format <format>   json or jsonl; otherwise infer from path/content.
   --output <path.xlsx>      XLSX output path. - is not accepted.
-  --mapping <path>          Explicit mapping file path.
+  --mapping <path>          Explicit mapping v1 file path.
   --progress-interval <n>   Report every n streamed records to stderr (default: 0).
   --overwrite               Permit replacement of an existing output.
   --result-format <format>  text (default) or json.
+
+Inspect options:
+  --input <path|->          JSON / JSONL file path, or - for stdin.
+  --input-format <format>   json or jsonl; otherwise infer from path/content.
   --max-records <count>     Inspect at most this many records (default: 1000).
   --sample-values <count>   Keep at most this many samples per path (default: 3).
+  --result-format <format>  text (default) or json.
+
+Validate-mapping options:
+  --mapping <path>          Explicit mapping v1 file path.
+  --result-format <format>  text (default) or json.
+
+Global metadata options:
   --help                    Show this help and exit.
   --version                 Show product name and package version and exit.
 
 Examples:
-  miku-json2xlsx convert --input records.json --output records.xlsx --mapping mapping.json
-  miku-json2xlsx convert --input - --input-format jsonl --output records.xlsx --mapping mapping.json --result-format json
   miku-json2xlsx inspect --input records.jsonl --result-format json
   miku-json2xlsx validate-mapping --mapping mapping.json --result-format json
-  miku-json2xlsx inspect --input - --input-format json --max-records 100
+  miku-json2xlsx convert --input records.json --output records.xlsx --mapping mapping.json --result-format json
+  miku-json2xlsx convert --input - --input-format jsonl --output records.xlsx --mapping mapping.json --result-format json
 
 References:
-  README.md
-  docs/cli-contract.md
-  docs/agent-json-contract.md
-  docs/conversion-diagnostics.md
-  docs/mapping-schema.md
-  docs/project-goal.md
-  docs/reproducibility.md
-  docs/streaming-jsonl.md
+  https://github.com/igapyon/miku-json2xlsx
+  https://github.com/igapyon/miku-json2xlsx/blob/devel/docs/cli-contract.md
+  https://github.com/igapyon/miku-json2xlsx/blob/devel/docs/agent-json-contract.md
+  https://github.com/igapyon/miku-json2xlsx/blob/devel/docs/conversion-diagnostics.md
+  https://github.com/igapyon/miku-json2xlsx/blob/devel/docs/mapping-schema.md
+  https://github.com/igapyon/miku-json2xlsx/blob/devel/docs/reproducibility.md
+  https://github.com/igapyon/miku-json2xlsx/blob/devel/docs/streaming-jsonl.md
 `;
 
 // src/ts/cli-options.ts

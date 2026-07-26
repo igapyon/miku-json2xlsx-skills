@@ -1,7 +1,7 @@
 # Mapping Schema v1
 
 This reference summarizes the mapping contract published by upstream
-`miku-json2xlsx` `v0.3.0`. The upstream CLI remains the source of truth and must
+`miku-json2xlsx` `v0.4.1`. The upstream CLI remains the source of truth and must
 validate every mapping before conversion.
 
 ## Example
@@ -69,6 +69,8 @@ validate every mapping before conversion.
 - Tracking-column names must not collide with normal column names.
 - Sheet names must satisfy Excel naming rules, including the 31-character
   limit, forbidden characters, and case-insensitive uniqueness.
+- `README` is reserved case-insensitively for the generated workbook cover and
+  cannot be used as a mapped sheet name.
 - Missing and explicit `null` values become empty cells.
 
 ## Validation

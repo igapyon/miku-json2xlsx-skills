@@ -10,13 +10,14 @@ skill layer.
 
 ## Current Status
 
-This repository is CLI-backed at version `0.3.0`. It bundles the executable
-runtime from upstream `miku-json2xlsx` release `v0.3.0` and supports the
+This repository is CLI-backed at beta version `0.4.1`. It bundles the executable
+runtime from upstream `miku-json2xlsx` release `v0.4.1` and supports the
 published `inspect`, `validate-mapping`, and `convert` operations.
 
 The skill keeps mapping decisions human-reviewable and delegates JSON parsing,
 mapping validation, XLSX generation, and diagnostics to the bundled upstream
-runtime.
+runtime. Generated workbooks begin with an English `README` data-dictionary
+sheet, followed by the mapped root and child sheets.
 
 ## Repository and Skill Names
 
@@ -74,7 +75,7 @@ repository owns activation, agent workflow guidance, runtime discovery,
 human-reviewable handoff, and packaging.
 
 The executable runtime is
-`skills/igapyon-miku-json2xlsx/runtime/miku-json2xlsx-0.3.0.mjs`.
+`skills/igapyon-miku-json2xlsx/runtime/miku-json2xlsx-0.4.1.mjs`.
 Its release provenance and SHA-256 are recorded in
 `skills/igapyon-miku-json2xlsx/runtime/runtime-manifest.json` and verified
 before every runner invocation.

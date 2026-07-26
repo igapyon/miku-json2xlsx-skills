@@ -33,8 +33,8 @@ data cleanup, or format-conversion requests.
 
 ## Current Backend Status
 
-Version `0.3.0` is CLI-backed. The bundled upstream executable supports
-`inspect`, `validate-mapping`, and `convert`. Invoke it through
+Version `0.4.1` is CLI-backed beta software. The bundled upstream executable
+supports `inspect`, `validate-mapping`, and `convert`. Invoke it through
 `lib/run-miku-json2xlsx.mjs`, which resolves the executable declared by
 `runtime/runtime-manifest.json` and verifies its SHA-256 before execution. Do
 not substitute the importable runtime bundle or an unrelated spreadsheet
@@ -60,6 +60,8 @@ implementation.
 - use `--result-format json` for agent-operated product commands
 - check the process exit code, result `status`, `diagnostics`, and `artifacts`
 - do not add `--overwrite` unless the user explicitly authorizes replacement
+- expect each generated workbook to start with the upstream-owned English
+  `README` data-dictionary sheet; mapped root and child sheets follow it
 
 ## CLI Workflow
 
@@ -93,8 +95,9 @@ implementation.
      --result-format json
    ```
 
-6. Report the XLSX artifact path, sheets/rows when reported, and diagnostics.
-   Treat exit codes `1`, `2`, and `3` according to the upstream contract.
+6. Report the XLSX artifact path, the generated `README` cover, mapped
+   sheets/rows when reported, and diagnostics. Treat exit codes `1`, `2`, and
+   `3` according to the upstream contract.
 
 ## References
 

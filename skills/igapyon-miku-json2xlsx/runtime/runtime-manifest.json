@@ -3,13 +3,13 @@
   "product": "miku-json2xlsx",
   "upstream": {
     "repository": "https://github.com/igapyon/miku-json2xlsx",
-    "release": "v0.3.0",
-    "commit": "9cf12f8e3f8d0722fd79b4734b9198647332b986"
+    "release": "v0.4.1",
+    "commit": "7830b7050294012d2a5e7ef65b57da05d45b4c15"
   },
   "executable": {
-    "file": "miku-json2xlsx-0.3.0.mjs",
-    "version": "0.3.0",
+    "file": "miku-json2xlsx-0.4.1.mjs",
+    "version": "0.4.1",
     "role": "cli",
-    "sha256": "f19f26e1cf8c8c6224aa86ad05ad7094b590b2575e2ba395b12461385f7d54bb"
+    "sha256": "6160dba0563b97452a38b34359e31aceffe3f662f0ec36bc398523e5737d2dc2"
   }
 }

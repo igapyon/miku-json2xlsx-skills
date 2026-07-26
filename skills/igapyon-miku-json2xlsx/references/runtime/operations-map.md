@@ -4,7 +4,7 @@
 
 Current policy: `cli-only`.
 
-Use the bundled upstream `v0.3.0` executable through
+Use the bundled upstream `v0.4.1` executable through
 `lib/run-miku-json2xlsx.mjs`. The runner requires
 `runtime/runtime-manifest.json` and verifies the declared executable SHA-256
 before every operation. Missing, incompatible, or digest-mismatched runtime is
@@ -27,7 +27,8 @@ skill-local converter, or unrelated spreadsheet implementation.
 - source input: user-provided JSON or JSONL
 - inspection result: machine-readable upstream CLI output
 - mapping: deterministic conversion specification owned by the upstream contract
-- primary output: generated XLSX workbook
+- primary output: generated XLSX workbook with an English `README` cover,
+  followed by mapped root and child sheets
 - diagnostics: warnings and hard errors with source locations where available
 
 ## Hard Errors

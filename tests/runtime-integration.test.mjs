@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import test from "node:test";
 
 import {
@@ -17,7 +17,7 @@ const RUNNER = path.resolve(SKILL_ROOT, "lib", "run-miku-json2xlsx.mjs");
 
 test("runtime resolver selects the verified executable artifact", () => {
   const manifest = loadRuntimeManifest();
-  assert.equal(manifest.executable.version, "0.3.0");
+  assert.equal(manifest.executable.version, "0.4.1");
   assert.equal(
     path.basename(findRuntimeArtifact()),
     manifest.executable.file
@@ -122,6 +122,67 @@ test("bundled runtime inspects, validates, and converts a minimal input", () => 
   assert.equal(conversion.command, "convert");
   assert.deepEqual(conversion.artifacts, [{ kind: "xlsx", path: outputPath }]);
   assert.equal(fs.statSync(outputPath).size > 0, true);
+
+  const workbookXml = execFileSync(
+    "unzip",
+    ["-p", outputPath, "xl/workbook.xml"],
+    { encoding: "utf8" }
+  );
+  assert.match(
+    workbookXml,
+    /<sheet name="README" sheetId="1" r:id="rId1"\/>/
+  );
+  assert.match(
+    workbookXml,
+    /<sheet name="Records" sheetId="2" r:id="rId2"\/>/
+  );
+});
+
+test("bundled runtime reserves README for the generated workbook cover", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "miku-json2xlsx-skill-"));
+  const mappingPath = path.resolve(tempRoot, "mapping.json");
+
+  fs.writeFileSync(mappingPath, JSON.stringify({
+    schemaVersion: 1,
+    sheets: [
+      {
+        name: "readme",
+        kind: "root",
+        sourcePath: "$",
+        recordIdColumn: "record_id",
+        sourceRecordColumn: "source_record",
+        columns: [
+          { name: "id", sourcePath: "$.id", type: "number" }
+        ]
+      }
+    ]
+  }));
+
+  const validation = spawnSync(
+    process.execPath,
+    [
+      RUNNER,
+      "validate-mapping",
+      "--mapping",
+      mappingPath,
+      "--result-format",
+      "json"
+    ],
+    {
+      cwd: ROOT,
+      encoding: "utf8"
+    }
+  );
+
+  assert.equal(validation.status, 1);
+  const result = JSON.parse(validation.stdout);
+  assert.equal(result.status, "failure");
+  assert.equal(
+    result.diagnostics.some(
+      ({ code }) => code === "MAPPING_RESERVED_SHEET_NAME"
+    ),
+    true
+  );
 });
 
 function runJson(args) {

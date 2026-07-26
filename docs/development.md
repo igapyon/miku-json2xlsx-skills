@@ -4,11 +4,12 @@
 
 - product repository: <https://github.com/igapyon/miku-json2xlsx>
 - compatibility branch: `devel`
-- checked commit: `9cf12f8e3f8d0722fd79b4734b9198647332b986`
-- checked release: `v0.3.0`
-- checked state on 2026-07-25: JSON/JSONL inspection, mapping validation,
-  typed XLSX conversion, streaming JSONL conversion, and release assets
-- received executable asset: `miku-json2xlsx-0.3.0.mjs`
+- checked commit: `7830b7050294012d2a5e7ef65b57da05d45b4c15`
+- checked release: `v0.4.1`
+- checked state on 2026-07-27: JSON/JSONL inspection, mapping validation,
+  typed XLSX conversion, streaming JSONL conversion, self-describing workbook
+  covers, beta/runtime contracts, and release assets
+- received executable asset: `miku-json2xlsx-0.4.1.mjs`
 - provenance and SHA-256 source:
   `skills/igapyon-miku-json2xlsx/runtime/runtime-manifest.json`
 
@@ -17,9 +18,13 @@ The bundled executable runtime supports `--help`, `--version`, `inspect`,
 source archive are separate release artifacts and are not required for normal
 Skill execution.
 
+Version `0.4.0` adds an English `README` cover as the first generated sheet.
+The mapped root sheet follows it, and `README` is reserved case-insensitively
+from use as a mapping sheet name.
+
 ## miku-soft Reference Check
 
-- checked date: 2026-07-23
+- checked date: 2026-07-27
 - main workflow: `references/40-agent-skills-workflow.md`
 - installed `igapyon-miku-soft-developer` commit: unavailable because the
   installed skill directory is not a Git checkout
