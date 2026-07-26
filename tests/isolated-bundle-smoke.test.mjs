@@ -24,7 +24,7 @@ test("generated bundle runs the upstream CLI from an isolated install shape", ()
   assert.equal(fs.existsSync(path.resolve(installedSkillRoot, "index.json")), true);
   assert.equal(fs.existsSync(path.resolve(installedSkillRoot, "references", "INDEX.md")), true);
   assert.equal(
-    fs.existsSync(path.resolve(installedSkillRoot, "runtime", "miku-json2xlsx-0.3.0.mjs")),
+    fs.existsSync(path.resolve(installedSkillRoot, "runtime", "miku-json2xlsx-0.4.1.mjs")),
     true
   );
   assert.equal(
@@ -37,5 +37,5 @@ test("generated bundle runs the upstream CLI from an isolated install shape", ()
     cwd: isolatedRoot,
     encoding: "utf8"
   });
-  assert.equal(version, "miku-json2xlsx 0.3.0\n");
+  assert.equal(version, "miku-json2xlsx 0.4.1\n");
 });

@@ -42,6 +42,9 @@ child sheets, explicit tracking columns, and typed columns. Read
 supported types, and v1 limits. Always run `validate-mapping`; human-readable
 planning is not a substitute for validated CLI input.
 
+`README` is reserved case-insensitively for the generated workbook cover and
+must not be proposed as a mapped sheet name.
+
 ## Write Boundary
 
 Writing an XLSX file requires human approval or an unambiguous instruction that
@@ -54,4 +57,6 @@ Use `--result-format json`. Check the exit code, `status`, `diagnostics[]`, and
 `artifacts[]`. Safe warnings may accompany exit code `0`; semantic or
 processing failures use exit code `1`, usage/malformed-input failures use `2`,
 and unexpected runtime failures use `3`. Do not treat a path as a completed
-XLSX artifact unless the successful result lists it.
+XLSX artifact unless the successful result lists it. A successful `v0.4.1`
+workbook begins with the generated English `README` data dictionary, followed
+by the mapped root and child sheets.
