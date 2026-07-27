@@ -4,15 +4,15 @@
  "generation": {"schemaVersion":1,"inputPath":".","markdownOutput":false,"recursive":true,"includeExtensions":["md","mjs","json","yaml"],"inputEncoding":"utf8","outputEncoding":"utf8","title":"igapyon-miku-json2xlsx Skill Index","includeGeneratorMetadata":true},
  "basePath": ".",
  "files": [
-  {"name":"SKILL.md","path":"SKILL.md","ext":"md","dir":"","size":5044,"description":"Use only when the user explicitly names `miku-json2xlsx`, `miku-json2xlsx-skills`, or `igapyon-miku-json2xlsx` for product-specific JSON or JSONL to XLSX workflows. Do not auto-activate for generic JSON, spreadsheet, XLSX, data analysis, or file-convers...","summary":"Miku JSON to XLSX"},
+  {"name":"SKILL.md","path":"SKILL.md","ext":"md","dir":"","size":5765,"description":"Use only when the user explicitly names `miku-json2xlsx`, `miku-json2xlsx-skills`, or `igapyon-miku-json2xlsx` for product-specific JSON or JSONL to XLSX workflows. Do not auto-activate for generic JSON, spreadsheet, XLSX, data analysis, or file-convers...","summary":"Miku JSON to XLSX"},
   {"name":"openai.yaml","path":"agents/openai.yaml","ext":"yaml","dir":"agents","size":119},
   {"name":"run-miku-json2xlsx.mjs","path":"lib/run-miku-json2xlsx.mjs","ext":"mjs","dir":"lib","size":3656},
   {"name":"INDEX.md","path":"references/INDEX.md","ext":"md","dir":"references","size":728,"summary":"Miku JSON to XLSX References"},
-  {"name":"mapping-v1.md","path":"references/runtime/mapping-v1.md","ext":"md","dir":"references/runtime","size":2779,"summary":"Mapping Schema v1"},
-  {"name":"operations-map.md","path":"references/runtime/operations-map.md","ext":"md","dir":"references/runtime","size":1855,"summary":"Runtime Operations Map"},
-  {"name":"upstream-contract.md","path":"references/runtime/upstream-contract.md","ext":"md","dir":"references/runtime","size":1985,"summary":"Upstream Contract"},
-  {"name":"json2xlsx-workflow.md","path":"references/workflow/json2xlsx-workflow.md","ext":"md","dir":"references/workflow","size":2500,"summary":"JSON to XLSX Workflow"},
-  {"name":"miku-json2xlsx-0.4.1.mjs","path":"runtime/miku-json2xlsx-0.4.1.mjs","ext":"mjs","dir":"runtime","size":80280},
+  {"name":"mapping-v1.md","path":"references/runtime/mapping-v1.md","ext":"md","dir":"references/runtime","size":3162,"summary":"Mapping Schema v1"},
+  {"name":"operations-map.md","path":"references/runtime/operations-map.md","ext":"md","dir":"references/runtime","size":2234,"summary":"Runtime Operations Map"},
+  {"name":"upstream-contract.md","path":"references/runtime/upstream-contract.md","ext":"md","dir":"references/runtime","size":2053,"summary":"Upstream Contract"},
+  {"name":"json2xlsx-workflow.md","path":"references/workflow/json2xlsx-workflow.md","ext":"md","dir":"references/workflow","size":3158,"summary":"JSON to XLSX Workflow"},
+  {"name":"miku-json2xlsx-0.4.2.mjs","path":"runtime/miku-json2xlsx-0.4.2.mjs","ext":"mjs","dir":"runtime","size":89755},
   {"name":"runtime-manifest.json","path":"runtime/runtime-manifest.json","ext":"json","dir":"runtime","size":409}
  ]
 }

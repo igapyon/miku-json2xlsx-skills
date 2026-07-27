@@ -33,8 +33,9 @@ data cleanup, or format-conversion requests.
 
 ## Current Backend Status
 
-Version `0.4.1` is CLI-backed beta software. The bundled upstream executable
-supports `inspect`, `validate-mapping`, and `convert`. Invoke it through
+Version `0.4.2` is CLI-backed beta software. The bundled upstream executable
+supports `inspect`, `validate-mapping`, and `convert`, including deterministic
+automatic mapping and optional generated-mapping output. Invoke it through
 `lib/run-miku-json2xlsx.mjs`, which resolves the executable declared by
 `runtime/runtime-manifest.json` and verifies its SHA-256 before execution. Do
 not substitute the importable runtime bundle or an unrelated spreadsheet
@@ -59,6 +60,7 @@ implementation.
   provenance source; do not bypass its digest verification
 - use `--result-format json` for agent-operated product commands
 - check the process exit code, result `status`, `diagnostics`, and `artifacts`
+- check successful conversion `mappingMode` for `auto` or `explicit`
 - do not add `--overwrite` unless the user explicitly authorizes replacement
 - expect each generated workbook to start with the upstream-owned English
   `README` data-dictionary sheet; mapped root and child sheets follow it
@@ -73,31 +75,40 @@ implementation.
    ```
 
 2. Review `inspection.scope`, paths, types, missing/null values, arrays, and
-   bounded samples. Read
-   [references/runtime/mapping-v1.md](references/runtime/mapping-v1.md), then
-   propose a mapping v1 document using the published contract.
-3. Validate the mapping:
+   bounded samples. Choose one mapping mode:
+   - omit `--mapping` for deterministic automatic mapping of a rereadable file;
+     arrays remain JSON columns and no child sheets are inferred
+   - read [references/runtime/mapping-v1.md](references/runtime/mapping-v1.md)
+     and propose an explicit mapping when column control or child sheets are
+     required
+3. For an explicit mapping, validate it:
 
    ```bash
    node <skill-root>/lib/run-miku-json2xlsx.mjs validate-mapping \
      --mapping <mapping.json> --result-format json
    ```
 
-4. Present material assumptions and warnings. Obtain approval or an unambiguous
-   instruction identifying the reviewed mapping and output path.
+4. Present the selected mapping mode, material assumptions, and warnings.
+   Obtain approval or an unambiguous instruction identifying the output path
+   and, for explicit mode, the reviewed mapping.
 5. Convert:
 
    ```bash
    node <skill-root>/lib/run-miku-json2xlsx.mjs convert \
      --input <input.json-or-jsonl> \
      --output <output.xlsx> \
-     --mapping <mapping.json> \
+     [--mapping <mapping.json>] \
+     [--mapping-output <generated-mapping.json>] \
      --result-format json
    ```
 
-6. Report the XLSX artifact path, the generated `README` cover, mapped
-   sheets/rows when reported, and diagnostics. Treat exit codes `1`, `2`, and
-   `3` according to the upstream contract.
+   Use `--mapping-output` only in automatic mode when the generated mapping
+   should be saved for inspection or reuse. Automatic mode requires a file
+   input; stdin still requires an explicit mapping.
+6. Report `mappingMode`, the XLSX artifact path, any generated mapping artifact,
+   the generated `README` cover, mapped sheets/rows when reported, and
+   diagnostics. Treat exit codes `1`, `2`, and `3` according to the upstream
+   contract.
 
 ## References
 
