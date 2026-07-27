@@ -11,7 +11,9 @@ test("skill contract is explicit and CLI-backed", () => {
 
   assert.match(skill, /name: igapyon-miku-json2xlsx/);
   assert.match(skill, /miku-json2xlsx-skills/);
-  assert.match(skill, /Version `0\.4\.1` is CLI-backed/);
+  assert.match(skill, /Version `0\.4\.2` is CLI-backed/);
+  assert.match(skill, /deterministic automatic mapping/);
+  assert.match(skill, /--mapping-output/);
   assert.match(skill, /run-miku-json2xlsx\.mjs/);
   assert.match(skill, /references\/runtime\/mapping-v1\.md/);
   assert.match(skill, /--result-format json/);
@@ -19,7 +21,7 @@ test("skill contract is explicit and CLI-backed", () => {
   assert.equal(fs.existsSync(path.resolve(skillRoot, "index.json")), true);
 });
 
-test("runtime manifest pins the verified v0.4.1 executable asset", () => {
+test("runtime manifest pins the verified v0.4.2 executable asset", () => {
   const contract = fs.readFileSync(
     path.resolve(skillRoot, "references", "runtime", "upstream-contract.md"),
     "utf8"
@@ -31,21 +33,21 @@ test("runtime manifest pins the verified v0.4.1 executable asset", () => {
     )
   );
 
-  assert.match(contract, /checked commit: `7830b7050294012d2a5e7ef65b57da05d45b4c15`/);
-  assert.match(contract, /checked release: `v0.4.1`/);
+  assert.match(contract, /checked commit: `b134a7881e58733f233361bf36c7eef681487058`/);
+  assert.match(contract, /checked release: `v0.4.2`/);
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.product, "miku-json2xlsx");
-  assert.equal(manifest.upstream.release, "v0.4.1");
+  assert.equal(manifest.upstream.release, "v0.4.2");
   assert.equal(
     manifest.upstream.commit,
-    "7830b7050294012d2a5e7ef65b57da05d45b4c15"
+    "b134a7881e58733f233361bf36c7eef681487058"
   );
-  assert.equal(manifest.executable.file, "miku-json2xlsx-0.4.1.mjs");
-  assert.equal(manifest.executable.version, "0.4.1");
+  assert.equal(manifest.executable.file, "miku-json2xlsx-0.4.2.mjs");
+  assert.equal(manifest.executable.version, "0.4.2");
   assert.equal(manifest.executable.role, "cli");
   assert.equal(
     manifest.executable.sha256,
-    "6160dba0563b97452a38b34359e31aceffe3f662f0ec36bc398523e5737d2dc2"
+    "969e74f65c8f8cdb30e9ab067d43eeb5138f208b3e79f1ca4006e9511b5c4251"
   );
 });
 

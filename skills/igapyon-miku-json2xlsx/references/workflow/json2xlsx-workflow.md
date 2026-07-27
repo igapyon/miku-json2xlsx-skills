@@ -5,10 +5,10 @@
 The workflow proceeds in four stages.
 
 1. Inspect the JSON or JSONL input through the upstream CLI.
-2. Propose a mapping covering sheets, columns, types, JSON paths, and parent-child
-   relationships.
-3. Present material assumptions and warnings, then obtain approval or an
-   unambiguous conversion instruction.
+2. Choose deterministic automatic mapping or propose an explicit mapping
+   covering sheets, columns, types, JSON paths, and parent-child relationships.
+3. Present the mapping mode, material assumptions, and warnings, then obtain
+   approval or an unambiguous conversion instruction.
 4. Execute the upstream CLI and report the workbook path, sheet relationships,
    record counts, and warnings.
 
@@ -27,7 +27,7 @@ inspection output and bounded samples.
 
 ## Mapping Review
 
-A mapping v1 proposal makes these decisions reviewable:
+An explicit mapping v1 proposal makes these decisions reviewable:
 
 - sheet names and collision handling
 - column names, order, source JSON paths, and target types
@@ -45,18 +45,28 @@ planning is not a substitute for validated CLI input.
 `README` is reserved case-insensitively for the generated workbook cover and
 must not be proposed as a mapped sheet name.
 
+For straightforward file input, automatic mapping may be selected instead.
+It deterministically creates a `Records` root sheet, preserves top-level
+objects and arrays as JSON columns, and expands object leaf paths. It does not
+create child sheets, and it cannot be used with stdin because JSONL auto-mapping
+requires a second pass. Add `--mapping-output <path>` when the generated mapping
+must be reviewed, edited, or reused.
+
 ## Write Boundary
 
 Writing an XLSX file requires human approval or an unambiguous instruction that
-identifies the reviewed mapping and output target. Existing files must not be
-overwritten implicitly.
+identifies the selected mapping mode and output target. Explicit mappings must
+also identify the reviewed mapping. Existing files must not be overwritten
+implicitly.
 
 ## Result Review
 
-Use `--result-format json`. Check the exit code, `status`, `diagnostics[]`, and
-`artifacts[]`. Safe warnings may accompany exit code `0`; semantic or
+Use `--result-format json`. Check the exit code, `status`, `mappingMode`,
+`diagnostics[]`, and `artifacts[]`. Safe warnings may accompany exit code `0`;
+semantic or
 processing failures use exit code `1`, usage/malformed-input failures use `2`,
 and unexpected runtime failures use `3`. Do not treat a path as a completed
-XLSX artifact unless the successful result lists it. A successful `v0.4.1`
-workbook begins with the generated English `README` data dictionary, followed
-by the mapped root and child sheets.
+artifact unless the successful result lists it. When `--mapping-output` is
+used, require both the XLSX and mapping entries. A successful `v0.4.2` workbook
+begins with the generated English `README` data dictionary, followed by the
+mapped root and child sheets.

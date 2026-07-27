@@ -5,18 +5,18 @@
 - repository: <https://github.com/igapyon/miku-json2xlsx>
 - initial branch anchor: `devel`
 - checked on: 2026-07-27
-- checked commit: `7830b7050294012d2a5e7ef65b57da05d45b4c15`
-- checked release: `v0.4.1`
-- executable asset: `miku-json2xlsx-0.4.1.mjs`
+- checked commit: `b134a7881e58733f233361bf36c7eef681487058`
+- checked release: `v0.4.2`
+- executable asset: `miku-json2xlsx-0.4.2.mjs`
 - machine-readable provenance and SHA-256:
   `runtime/runtime-manifest.json`
 
 At the checked commit, upstream provides metadata commands, JSON/JSONL
-`inspect`, mapping v1 validation, typed root/child XLSX conversion,
-machine-readable results, structured diagnostics, protected/atomic output, and
-streaming JSONL conversion. Generated workbooks start with an English `README`
-data-dictionary cover, and the mapping contract reserves that sheet name
-case-insensitively.
+`inspect`, mapping v1 validation, deterministic automatic mapping, optional
+generated-mapping output, typed root/child XLSX conversion, machine-readable
+results, structured diagnostics, protected/atomic output, and streaming JSONL
+conversion. Generated workbooks start with an English `README` data-dictionary
+cover, and the mapping contract reserves that sheet name case-insensitively.
 
 ## Product Boundary
 
@@ -40,12 +40,12 @@ This Agent Skill owns:
 ## Runtime Intake
 
 The received executable is stored at
-`runtime/miku-json2xlsx-0.4.1.mjs`. The thin runner reads
+`runtime/miku-json2xlsx-0.4.2.mjs`. The thin runner reads
 `runtime/runtime-manifest.json`, requires its declared versioned executable,
 and verifies the SHA-256 before invocation.
 
 The upstream importable runtime asset
-`miku-json2xlsx-runtime-0.4.1.mjs` and source archive have different artifact
+`miku-json2xlsx-runtime-0.4.2.mjs` and source archive have different artifact
 roles and must not silently replace the executable CLI. Do not build or copy an
 upstream source tree into this Skill repository as the normal runtime path.
 

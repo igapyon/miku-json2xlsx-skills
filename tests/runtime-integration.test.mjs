@@ -17,7 +17,7 @@ const RUNNER = path.resolve(SKILL_ROOT, "lib", "run-miku-json2xlsx.mjs");
 
 test("runtime resolver selects the verified executable artifact", () => {
   const manifest = loadRuntimeManifest();
-  assert.equal(manifest.executable.version, "0.4.1");
+  assert.equal(manifest.executable.version, "0.4.2");
   assert.equal(
     path.basename(findRuntimeArtifact()),
     manifest.executable.file
@@ -120,6 +120,7 @@ test("bundled runtime inspects, validates, and converts a minimal input", () => 
   ]);
   assert.equal(conversion.status, "success");
   assert.equal(conversion.command, "convert");
+  assert.equal(conversion.mappingMode, "explicit");
   assert.deepEqual(conversion.artifacts, [{ kind: "xlsx", path: outputPath }]);
   assert.equal(fs.statSync(outputPath).size > 0, true);
 
@@ -183,6 +184,55 @@ test("bundled runtime reserves README for the generated workbook cover", () => {
     ),
     true
   );
+});
+
+test("bundled runtime automatically maps JSONL and publishes the generated mapping", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "miku-json2xlsx-auto-"));
+  const inputPath = path.resolve(tempRoot, "records.jsonl");
+  const outputPath = path.resolve(tempRoot, "records.xlsx");
+  const mappingOutputPath = path.resolve(tempRoot, "generated-mapping.json");
+
+  fs.writeFileSync(
+    inputPath,
+    [
+      JSON.stringify({ id: 1, payload: { customer: "Alice" }, tags: ["a"] }),
+      JSON.stringify({ id: 2, payload: { amount: 1200, customer: "Bob" }, tags: [] })
+    ].join("\n") + "\n"
+  );
+
+  const conversion = runJson([
+    "convert",
+    "--input",
+    inputPath,
+    "--output",
+    outputPath,
+    "--mapping-output",
+    mappingOutputPath,
+    "--result-format",
+    "json"
+  ]);
+
+  assert.equal(conversion.status, "success");
+  assert.equal(conversion.command, "convert");
+  assert.equal(conversion.mappingMode, "auto");
+  assert.equal(conversion.inputMode, "streaming-jsonl");
+  assert.equal(conversion.recordsProcessed, 2);
+  assert.deepEqual(conversion.artifacts, [
+    { kind: "xlsx", path: outputPath },
+    { kind: "mapping", path: mappingOutputPath }
+  ]);
+
+  const mappingText = fs.readFileSync(mappingOutputPath, "utf8");
+  assert.equal(mappingText.endsWith("\n"), true);
+  const mapping = JSON.parse(mappingText);
+  assert.deepEqual(mapping.sheets[0].columns, [
+    { name: "id", sourcePath: "$.id", type: "number" },
+    { name: "payload", sourcePath: "$.payload", type: "json" },
+    { name: "payload.amount", sourcePath: "$.payload.amount", type: "number" },
+    { name: "payload.customer", sourcePath: "$.payload.customer", type: "string" },
+    { name: "tags", sourcePath: "$.tags", type: "json" }
+  ]);
+  assert.equal(fs.statSync(outputPath).size > 0, true);
 });
 
 function runJson(args) {

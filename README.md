@@ -3,21 +3,23 @@
 `miku-json2xlsx-skills` is the Agent Skills companion package for
 [`miku-json2xlsx`](https://github.com/igapyon/miku-json2xlsx).
 
-It is intended to inspect JSON or JSONL input through the upstream CLI, propose
-a human-reviewable workbook mapping, execute an approved conversion, and report
-the generated sheets and warnings without duplicating conversion logic in the
-skill layer.
+It is intended to inspect JSON or JSONL input through the upstream CLI, choose
+between deterministic automatic mapping and a human-reviewed explicit mapping,
+execute an approved conversion, and report the generated sheets, mapping
+artifact, and warnings without duplicating conversion logic in the skill layer.
 
 ## Current Status
 
-This repository is CLI-backed at beta version `0.4.1`. It bundles the executable
-runtime from upstream `miku-json2xlsx` release `v0.4.1` and supports the
-published `inspect`, `validate-mapping`, and `convert` operations.
+This repository is CLI-backed at beta version `0.4.2`. It bundles the executable
+runtime from upstream `miku-json2xlsx` release `v0.4.2` and supports the
+published `inspect`, `validate-mapping`, and `convert` operations, including
+deterministic automatic mapping and optional generated-mapping output.
 
-The skill keeps mapping decisions human-reviewable and delegates JSON parsing,
-mapping validation, XLSX generation, and diagnostics to the bundled upstream
-runtime. Generated workbooks begin with an English `README` data-dictionary
-sheet, followed by the mapped root and child sheets.
+The skill keeps the automatic-versus-explicit mapping choice human-reviewable
+and delegates JSON parsing, mapping generation and validation, XLSX generation,
+and diagnostics to the bundled upstream runtime. Generated workbooks begin with
+an English `README` data-dictionary sheet, followed by the mapped root and child
+sheets.
 
 ## Repository and Skill Names
 
@@ -75,7 +77,7 @@ repository owns activation, agent workflow guidance, runtime discovery,
 human-reviewable handoff, and packaging.
 
 The executable runtime is
-`skills/igapyon-miku-json2xlsx/runtime/miku-json2xlsx-0.4.1.mjs`.
+`skills/igapyon-miku-json2xlsx/runtime/miku-json2xlsx-0.4.2.mjs`.
 Its release provenance and SHA-256 are recorded in
 `skills/igapyon-miku-json2xlsx/runtime/runtime-manifest.json` and verified
 before every runner invocation.

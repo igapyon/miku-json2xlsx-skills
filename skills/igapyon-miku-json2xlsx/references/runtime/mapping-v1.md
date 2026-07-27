@@ -1,8 +1,15 @@
 # Mapping Schema v1
 
 This reference summarizes the mapping contract published by upstream
-`miku-json2xlsx` `v0.4.1`. The upstream CLI remains the source of truth and must
+`miku-json2xlsx` `v0.4.2`. The upstream CLI remains the source of truth and must
 validate every mapping before conversion.
+
+The same schema is used for deterministic automatic mappings generated when
+`convert` omits `--mapping`. Automatic mapping creates one `Records` root sheet,
+keeps top-level objects and arrays as `json` columns, expands object leaf paths
+into additional columns, and does not create child sheets. Use
+`--mapping-output <path>` to preserve that generated mapping for review or
+reuse.
 
 ## Example
 
