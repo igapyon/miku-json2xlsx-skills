@@ -3,14 +3,17 @@
 ## Upstream Anchor
 
 - product repository: <https://github.com/igapyon/miku-json2xlsx>
-- compatibility branch: `devel`
-- checked commit: `b134a7881e58733f233361bf36c7eef681487058`
-- checked release: `v0.4.2`
-- checked state on 2026-07-27: JSON/JSONL inspection, mapping validation,
+- compatibility source branch: local `devel-tiga0727mbg`
+- public base commit: `b134a7881e58733f233361bf36c7eef681487058`
+- latest checked public release: `v0.4.2`
+- received CLI version: `0.5.0`
+- received state on 2026-07-28: JSON/JSONL inspection, mapping validation,
   deterministic automatic mapping, optional generated-mapping output, typed
   XLSX conversion, streaming JSONL conversion, self-describing workbook covers,
-  beta/runtime contracts, and release assets
-- received executable asset: `miku-json2xlsx-0.4.2.mjs`
+  deterministic DEFLATE ZIP output, and beta/runtime contracts
+- received executable artifact: `miku-json2xlsx-0.5.0.mjs`
+- intake provenance: locally distilled from an uncommitted upstream worktree;
+  no immutable `0.5.0` commit or GitHub Release was available at intake time
 - provenance and SHA-256 source:
   `skills/igapyon-miku-json2xlsx/runtime/runtime-manifest.json`
 
@@ -19,10 +22,10 @@ The bundled executable runtime supports `--help`, `--version`, `inspect`,
 source archive are separate release artifacts and are not required for normal
 Skill execution.
 
-Version `0.4.2` adds deterministic automatic mapping when `--mapping` is
-omitted. It can preserve the generated mapping as formatted JSON through
-`--mapping-output`; automatic mapping keeps arrays as JSON columns and requires
-a rereadable input file rather than stdin.
+Version `0.5.0` preserves the `0.4.2` CLI help contract and adds deterministic
+DEFLATE compression for XLSX ZIP entries. Large file-backed worksheets are
+compressed through temporary files without retaining the completed worksheet
+or XLSX package in memory.
 
 ## miku-soft Reference Check
 

@@ -10,10 +10,10 @@ artifact, and warnings without duplicating conversion logic in the skill layer.
 
 ## Current Status
 
-This repository is CLI-backed at beta version `0.4.2`. It bundles the executable
-runtime from upstream `miku-json2xlsx` release `v0.4.2` and supports the
-published `inspect`, `validate-mapping`, and `convert` operations, including
-deterministic automatic mapping and optional generated-mapping output.
+This repository is CLI-backed at beta version `0.5.0`. It bundles a locally
+received distilled executable from the upstream `miku-json2xlsx` worktree and
+supports `inspect`, `validate-mapping`, and `convert`, including deterministic
+automatic mapping and optional generated-mapping output.
 
 The skill keeps the automatic-versus-explicit mapping choice human-reviewable
 and delegates JSON parsing, mapping generation and validation, XLSX generation,
@@ -77,10 +77,12 @@ repository owns activation, agent workflow guidance, runtime discovery,
 human-reviewable handoff, and packaging.
 
 The executable runtime is
-`skills/igapyon-miku-json2xlsx/runtime/miku-json2xlsx-0.4.2.mjs`.
-Its release provenance and SHA-256 are recorded in
+`skills/igapyon-miku-json2xlsx/runtime/miku-json2xlsx-0.5.0.mjs`.
+Its intake provenance and SHA-256 are recorded in
 `skills/igapyon-miku-json2xlsx/runtime/runtime-manifest.json` and verified
 before every runner invocation.
+This `0.5.0` intake is an unreleased local upstream distillation based on the
+public `v0.4.2` commit; the manifest records that provenance explicitly.
 The importable upstream runtime bundle has a different artifact role and is not
 used as the CLI executable.
 
