@@ -33,7 +33,7 @@ data cleanup, or format-conversion requests.
 
 ## Current Backend Status
 
-Version `0.4.2` is CLI-backed beta software. The bundled upstream executable
+Version `0.5.0` is CLI-backed beta software. The bundled upstream executable
 supports `inspect`, `validate-mapping`, and `convert`, including deterministic
 automatic mapping and optional generated-mapping output. Invoke it through
 `lib/run-miku-json2xlsx.mjs`, which resolves the executable declared by
@@ -64,6 +64,7 @@ implementation.
 - do not add `--overwrite` unless the user explicitly authorizes replacement
 - expect each generated workbook to start with the upstream-owned English
   `README` data-dictionary sheet; mapped root and child sheets follow it
+- expect generated XLSX ZIP entries to use deterministic DEFLATE compression
 
 ## CLI Workflow
 

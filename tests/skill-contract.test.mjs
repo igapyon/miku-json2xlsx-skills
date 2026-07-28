@@ -11,7 +11,7 @@ test("skill contract is explicit and CLI-backed", () => {
 
   assert.match(skill, /name: igapyon-miku-json2xlsx/);
   assert.match(skill, /miku-json2xlsx-skills/);
-  assert.match(skill, /Version `0\.4\.2` is CLI-backed/);
+  assert.match(skill, /Version `0\.5\.0` is CLI-backed/);
   assert.match(skill, /deterministic automatic mapping/);
   assert.match(skill, /--mapping-output/);
   assert.match(skill, /run-miku-json2xlsx\.mjs/);
@@ -21,7 +21,7 @@ test("skill contract is explicit and CLI-backed", () => {
   assert.equal(fs.existsSync(path.resolve(skillRoot, "index.json")), true);
 });
 
-test("runtime manifest pins the verified v0.4.2 executable asset", () => {
+test("runtime manifest pins the verified provisional 0.5.0 executable artifact", () => {
   const contract = fs.readFileSync(
     path.resolve(skillRoot, "references", "runtime", "upstream-contract.md"),
     "utf8"
@@ -32,22 +32,30 @@ test("runtime manifest pins the verified v0.4.2 executable asset", () => {
       "utf8"
     )
   );
+  const packageJson = JSON.parse(
+    fs.readFileSync(path.resolve(ROOT, "package.json"), "utf8")
+  );
 
-  assert.match(contract, /checked commit: `b134a7881e58733f233361bf36c7eef681487058`/);
-  assert.match(contract, /checked release: `v0.4.2`/);
+  assert.match(contract, /public base commit: `b134a7881e58733f233361bf36c7eef681487058`/);
+  assert.match(contract, /latest checked public release: `v0.4.2`/);
+  assert.match(contract, /uncommitted local upstream worktree/);
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.product, "miku-json2xlsx");
-  assert.equal(manifest.upstream.release, "v0.4.2");
+  assert.equal(manifest.upstream.release, null);
+  assert.equal(manifest.upstream.commit, null);
   assert.equal(
-    manifest.upstream.commit,
+    manifest.upstream.baseCommit,
     "b134a7881e58733f233361bf36c7eef681487058"
   );
-  assert.equal(manifest.executable.file, "miku-json2xlsx-0.4.2.mjs");
-  assert.equal(manifest.executable.version, "0.4.2");
+  assert.equal(manifest.upstream.sourceKind, "local-uncommitted-worktree");
+  assert.equal(manifest.upstream.sourceBranch, "devel-tiga0727mbg");
+  assert.equal(manifest.executable.file, "miku-json2xlsx-0.5.0.mjs");
+  assert.equal(manifest.executable.version, "0.5.0");
+  assert.equal(packageJson.version, manifest.executable.version);
   assert.equal(manifest.executable.role, "cli");
   assert.equal(
     manifest.executable.sha256,
-    "969e74f65c8f8cdb30e9ab067d43eeb5138f208b3e79f1ca4006e9511b5c4251"
+    "ab543255038d432730db486fec70ad8eb87df5f5751d592fd5907c4dfdac2b71"
   );
 });
 

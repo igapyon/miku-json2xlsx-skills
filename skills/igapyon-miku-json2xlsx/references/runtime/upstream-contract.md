@@ -3,20 +3,28 @@
 ## Compatibility Anchor
 
 - repository: <https://github.com/igapyon/miku-json2xlsx>
-- initial branch anchor: `devel`
-- checked on: 2026-07-27
-- checked commit: `b134a7881e58733f233361bf36c7eef681487058`
-- checked release: `v0.4.2`
-- executable asset: `miku-json2xlsx-0.4.2.mjs`
+- received on: 2026-07-28
+- source branch: local `devel-tiga0727mbg`
+- public base commit: `b134a7881e58733f233361bf36c7eef681487058`
+- latest checked public release: `v0.4.2`
+- immutable `0.5.0` source commit: unavailable
+- `0.5.0` GitHub Release: unavailable
+- executable artifact: `miku-json2xlsx-0.5.0.mjs`
 - machine-readable provenance and SHA-256:
   `runtime/runtime-manifest.json`
 
-At the checked commit, upstream provides metadata commands, JSON/JSONL
+The locally received `0.5.0` distillation provides metadata commands, JSON/JSONL
 `inspect`, mapping v1 validation, deterministic automatic mapping, optional
 generated-mapping output, typed root/child XLSX conversion, machine-readable
 results, structured diagnostics, protected/atomic output, and streaming JSONL
 conversion. Generated workbooks start with an English `README` data-dictionary
-cover, and the mapping contract reserves that sheet name case-insensitively.
+cover, use deterministic DEFLATE compression for ZIP entries, and reserve the
+cover sheet name case-insensitively.
+
+This intake came from an uncommitted local upstream worktree based on the public
+`v0.4.2` commit. It is digest-pinned but not release-pinned. Do not describe it
+as a published `v0.5.0` asset; replace this provisional provenance after an
+immutable upstream commit and Release become available.
 
 ## Product Boundary
 
@@ -40,15 +48,16 @@ This Agent Skill owns:
 ## Runtime Intake
 
 The received executable is stored at
-`runtime/miku-json2xlsx-0.4.2.mjs`. The thin runner reads
+`runtime/miku-json2xlsx-0.5.0.mjs`. The thin runner reads
 `runtime/runtime-manifest.json`, requires its declared versioned executable,
 and verifies the SHA-256 before invocation.
 
-The upstream importable runtime asset
-`miku-json2xlsx-runtime-0.4.2.mjs` and source archive have different artifact
-roles and must not silently replace the executable CLI. Do not build or copy an
-upstream source tree into this Skill repository as the normal runtime path.
+The upstream importable runtime bundle and source archive have different
+artifact roles and must not silently replace the executable CLI. Do not build
+or copy an upstream source tree into this Skill repository as the normal
+runtime path.
 
-For a later release, verify the release source, SHA-256, `--version`, complete
-`--help`, structured operation output, and focused integration tests before
-updating this compatibility anchor.
+When `0.5.0` is committed or released upstream, verify the immutable source,
+Release asset SHA-256, `--version`, complete `--help`, structured operation
+output, and focused integration tests before replacing this provisional
+compatibility anchor.

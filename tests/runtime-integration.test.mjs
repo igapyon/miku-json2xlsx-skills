@@ -17,7 +17,7 @@ const RUNNER = path.resolve(SKILL_ROOT, "lib", "run-miku-json2xlsx.mjs");
 
 test("runtime resolver selects the verified executable artifact", () => {
   const manifest = loadRuntimeManifest();
-  assert.equal(manifest.executable.version, "0.4.2");
+  assert.equal(manifest.executable.version, "0.5.0");
   assert.equal(
     path.basename(findRuntimeArtifact()),
     manifest.executable.file
@@ -123,6 +123,10 @@ test("bundled runtime inspects, validates, and converts a minimal input", () => 
   assert.equal(conversion.mappingMode, "explicit");
   assert.deepEqual(conversion.artifacts, [{ kind: "xlsx", path: outputPath }]);
   assert.equal(fs.statSync(outputPath).size > 0, true);
+  assert.equal(
+    readZipCompressionMethods(outputPath).every((method) => method === 8),
+    true
+  );
 
   const workbookXml = execFileSync(
     "unzip",
@@ -240,4 +244,19 @@ function runJson(args) {
     cwd: ROOT,
     encoding: "utf8"
   }));
+}
+
+function readZipCompressionMethods(filePath) {
+  const data = fs.readFileSync(filePath);
+  const methods = [];
+  let offset = 0;
+  while (offset + 30 <= data.length && data.readUInt32LE(offset) === 0x04034b50) {
+    methods.push(data.readUInt16LE(offset + 8));
+    const compressedSize = data.readUInt32LE(offset + 18);
+    const nameLength = data.readUInt16LE(offset + 26);
+    const extraLength = data.readUInt16LE(offset + 28);
+    offset += 30 + nameLength + extraLength + compressedSize;
+  }
+  assert.equal(methods.length > 0, true);
+  return methods;
 }

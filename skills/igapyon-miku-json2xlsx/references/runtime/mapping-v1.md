@@ -1,7 +1,7 @@
 # Mapping Schema v1
 
 This reference summarizes the mapping contract published by upstream
-`miku-json2xlsx` `v0.4.2`. The upstream CLI remains the source of truth and must
+`miku-json2xlsx` `0.5.0`. The upstream CLI remains the source of truth and must
 validate every mapping before conversion.
 
 The same schema is used for deterministic automatic mappings generated when

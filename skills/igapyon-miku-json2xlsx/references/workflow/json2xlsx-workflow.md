@@ -67,6 +67,7 @@ semantic or
 processing failures use exit code `1`, usage/malformed-input failures use `2`,
 and unexpected runtime failures use `3`. Do not treat a path as a completed
 artifact unless the successful result lists it. When `--mapping-output` is
-used, require both the XLSX and mapping entries. A successful `v0.4.2` workbook
+used, require both the XLSX and mapping entries. A successful `0.5.0` workbook
 begins with the generated English `README` data dictionary, followed by the
-mapped root and child sheets.
+mapped root and child sheets, and uses deterministic DEFLATE compression for
+its ZIP entries.

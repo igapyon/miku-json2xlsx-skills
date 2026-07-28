@@ -4,7 +4,7 @@
 
 Current policy: `cli-only`.
 
-Use the bundled upstream `v0.4.2` executable through
+Use the bundled upstream `0.5.0` executable through
 `lib/run-miku-json2xlsx.mjs`. The runner requires
 `runtime/runtime-manifest.json` and verifies the declared executable SHA-256
 before every operation. Missing, incompatible, or digest-mismatched runtime is
