@@ -65,9 +65,9 @@ node skills/igapyon-miku-json2xlsx/lib/run-miku-json2xlsx.mjs --version
 node skills/igapyon-miku-json2xlsx/lib/run-miku-json2xlsx.mjs --help
 ```
 
-After changing bundled skill files, regenerate
-`skills/igapyon-miku-json2xlsx/index.json` with `miku-indexgen`; do not edit the
-generated index manually.
+Skill references are linked by task. A generated root inventory is not required.
+Generated product indexes in user-selected output folders remain governed by the
+upstream CLI and should not be edited by hand.
 
 ## Runtime Boundary
 
