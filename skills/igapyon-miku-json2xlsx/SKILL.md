@@ -24,7 +24,7 @@ data cleanup, or format-conversion requests.
 
 ## Required First Checks
 
-1. Read [index.json](index.json) first as the generated discovery index.
+1. Use the reference links below to identify guidance for the requested operation. Search within the relevant reference directory when needed.
 2. Open only the references needed for the requested operation.
 3. Read [references/runtime/upstream-contract.md](references/runtime/upstream-contract.md)
    before relying on a runtime or mapping contract.
@@ -53,7 +53,6 @@ implementation.
   operation writes an XLSX file
 - avoid loading an entire large JSONL file into agent context; use the upstream
   inspection result and bounded samples
-- treat `index.json` as generated discovery metadata and never edit it manually
 - preserve upstream diagnostics and do not hide unsupported behavior
 - do not implement a parallel JSON-to-XLSX converter in this repository
 - treat `runtime/runtime-manifest.json` as the machine-readable runtime
@@ -115,7 +114,6 @@ implementation.
 
 Read these only when needed:
 
-- [index.json](index.json) for generated bundled-file discovery
 - [references/INDEX.md](references/INDEX.md) for reference navigation
 - [references/workflow/json2xlsx-workflow.md](references/workflow/json2xlsx-workflow.md)
   for the analysis, approval, execution, and reporting flow

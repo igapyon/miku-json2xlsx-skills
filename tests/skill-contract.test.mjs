@@ -18,7 +18,7 @@ test("skill contract is explicit and CLI-backed", () => {
   assert.match(skill, /references\/runtime\/mapping-v1\.md/);
   assert.match(skill, /--result-format json/);
   assert.equal(skill.includes("__SKILL_NAME__"), false);
-  assert.equal(fs.existsSync(path.resolve(skillRoot, "index.json")), true);
+  assert.equal(fs.existsSync(path.resolve(skillRoot, "index.json")), false);
 });
 
 test("runtime manifest pins the verified provisional 0.5.0 executable artifact", () => {

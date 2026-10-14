@@ -21,7 +21,7 @@ test("generated bundle runs the upstream CLI from an isolated install shape", ()
 
   const installedSkillRoot = path.resolve(isolatedRoot, "skills", skillName);
   assert.equal(fs.existsSync(path.resolve(installedSkillRoot, "SKILL.md")), true);
-  assert.equal(fs.existsSync(path.resolve(installedSkillRoot, "index.json")), true);
+  assert.equal(fs.existsSync(path.resolve(installedSkillRoot, "index.json")), false);
   assert.equal(fs.existsSync(path.resolve(installedSkillRoot, "references", "INDEX.md")), true);
   assert.equal(
     fs.existsSync(path.resolve(installedSkillRoot, "runtime", "miku-json2xlsx-0.5.0.mjs")),

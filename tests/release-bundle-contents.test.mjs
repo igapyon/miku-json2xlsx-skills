@@ -44,7 +44,6 @@ test("release zip contains installable skill files and excludes development-only
   }).trim().split(/\n/).filter(Boolean);
 
   assertIncludes(entries, `skills/${skillName}/SKILL.md`);
-  assertIncludes(entries, `skills/${skillName}/index.json`);
   assertIncludes(entries, `skills/${skillName}/references/INDEX.md`);
   assertIncludes(entries, `skills/${skillName}/references/workflow/json2xlsx-workflow.md`);
   assertIncludes(entries, `skills/${skillName}/references/runtime/mapping-v1.md`);
